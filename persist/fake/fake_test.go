@@ -60,7 +60,7 @@ func (t *FakePersisterTest) TestPutDocumentsIntoDB(c *check.C) {
 		},
 	}
 
-	c.Check(p.PutDocumentsIntoDB(docs...), check.IsNil)
+	c.Check(p.PutDocsIntoDB(docs), check.IsNil)
 	c.Check(len(p.documents), check.Equals, 2)
 
 	p.Close()
