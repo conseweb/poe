@@ -63,30 +63,56 @@ func NewPersister(cc cache.CacheInterface) PersistInterface {
 		persisterName = default_persister_name
 	}
 
-	var persister PersistInterface
 	switch persisterName {
 	case "fake":
 		persister = fake.NewFakePersister()
 	default:
 		persistLogger.Fatalf("unsupported persist type %s", persisterName)
 	}
-	go continuePersist(persister, cc)
+	go continuePersist(cc)
 
 	return persister
 }
 
+// ClosePersister close persister
+func ClosePersister() error {
+	persistLogger.Info("persister is stopping...")
+	defer persistLogger.Info("persister is stopped.")
+
+	closeChan <- 1
+	for {
+		if len(docsChan) > 0 || len(docQueue) > 0 {
+			time.Sleep(time.Second)
+			continue
+		}
+
+		break
+	}
+
+	return persister.Close()
+}
+
+var (
+	docsChan  chan *protos.Document
+	docQueue  []*protos.Document
+	persister PersistInterface
+	closeChan = make(chan int)
+)
+
 // pull data from cache, push data into database
-func continuePersist(p PersistInterface, cc cache.CacheInterface) {
+func continuePersist(cc cache.CacheInterface) {
+	persisterName := persister.GetPersisterName()
+
 	// cache customer subscribe cache topic
 	periodLimits := utils.GetPeriodLimits()
 	for _, period := range periodLimits {
-		cc.Subscribe(p.GetPersisterName(), cc.Topic(period.Period))
+		cc.Subscribe(persisterName, cc.Topic(period.Period))
 	}
 
 	// get documents from cache
 	getDocumentsFromCache := func(dc chan<- *protos.Document) {
 		for _, period := range periodLimits {
-			docs, err := cc.Get(p.GetPersisterName(), cc.Topic(period.Period), period.Limit)
+			docs, err := cc.Get(persisterName, cc.Topic(period.Period), period.Limit)
 			if err != nil {
 				persistLogger.Warningf("get documents from cache return error: %v", err)
 				continue
@@ -99,8 +125,8 @@ func continuePersist(p PersistInterface, cc cache.CacheInterface) {
 	}
 
 	// put documents into database
-	putDocumentsIntoDB := func(docQueue []*protos.Document) {
-		p.PutDocsIntoDB(docQueue)
+	putDocumentsIntoDB := func(docs []*protos.Document) {
+		persister.PutDocsIntoDB(docs)
 	}
 
 	// semaphore control
@@ -111,11 +137,11 @@ func continuePersist(p PersistInterface, cc cache.CacheInterface) {
 	if chanCap <= 0 {
 		chanCap = default_persistChan_cap
 	}
-	docsChan := make(chan *protos.Document, chanCap)
+	docsChan = make(chan *protos.Document, chanCap)
 	cacheCheckTicker := time.NewTicker(viper.GetDuration("persist.cacheCheckInterval"))
 
 	// db write batch
-	docQueue := make([]*protos.Document, 0)
+	docQueue = make([]*protos.Document, 0)
 	queueSize := viper.GetInt("persist.queueSize")
 	queueTimeoutTicker := time.NewTicker(viper.GetDuration("persist.queueTimeout"))
 
@@ -159,6 +185,8 @@ func continuePersist(p PersistInterface, cc cache.CacheInterface) {
 				putDocumentsIntoDB(dstDocs)
 			}()
 			docQueue = make([]*protos.Document, 0)
+		case <-closeChan:
+			close(docsChan)
 		}
 	}
 }

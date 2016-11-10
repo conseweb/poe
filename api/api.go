@@ -75,12 +75,14 @@ func (srv *APIServer) Start() {
 
 // Stop stops api server
 func (srv *APIServer) Stop() error {
+	apiLogger.Info("api server is stopping")
+	defer apiLogger.Info("api server is stopped")
+
 	// close irisapi
 	if err := srv.irisapi.Close(); err != nil {
 		apiLogger.Errorf("close api server irisapi return error: %s", err)
 		return err
 	}
 
-	apiLogger.Info("api server is stopped")
 	return nil
 }

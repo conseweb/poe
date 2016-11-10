@@ -14,40 +14,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package main
+package blockchain
 
 import (
-	"github.com/conseweb/common/config"
-	"github.com/conseweb/common/exec"
-	"github.com/conseweb/poe/api"
-	"github.com/hyperledger/fabric/flogging"
-	"github.com/op/go-logging"
 	"github.com/conseweb/poe/cache"
 	"github.com/conseweb/poe/persist"
 )
 
-var (
-	mainLogger = logging.MustGetLogger("main")
-)
-
-func init() {
-	config.LoadConfig("POE", "poe", "github.com/conseweb/poe")
+// Blockchain
+type Blockchain struct {
+	chaincodeID string
+	peers       []string
+	cacher      cache.CacheInterface
+	persister   persist.PersistInterface
 }
 
-func main() {
-	// set logging level
-	flogging.LoggingInit("main")
-
-	// cache
-	cc := cache.NewCache()
-
-	// persister
-	persister := persist.NewPersister(cc)
-
-	// api server
-	apisrv := api.NewAPIServer(cc, persister)
-	go apisrv.Start()
-
-	// handle signal
-	exec.HandleSignal(apisrv.Stop, persist.ClosePersister, cc.Close)
+func NewBlockchain() *Blockchain {
+	return &Blockchain{}
 }

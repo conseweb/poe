@@ -68,7 +68,12 @@ func (p *FakePersister) GetDocFromDBByDocID(docID string) (*protos.Document, err
 		return nil, fmt.Errorf("docID is empty")
 	}
 
-	return p.documents[docID], nil
+	doc, ok := p.documents[docID]
+	if !ok {
+		return nil, fmt.Errorf("no such document id")
+	}
+
+	return doc, nil
 }
 
 func (p *FakePersister) SetDocsBlockDigest(docIDs []string, digest string) error {
