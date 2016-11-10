@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package protos;
+
+// ProofObject
+message Document {
+    // unique id
+    string id = 1;
+    // raw data
+    bytes raw = 2;
+    // hash(block)
+    string blockDigest = 3;
+}

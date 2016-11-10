@@ -1,0 +1,68 @@
+##########################################################
+#
+# logging section
+#
+##########################################################
+logging:
+  main: debug
+  api: debug
+  cache: debug
+
+##########################################################
+#
+# front-end api section
+#
+##########################################################
+api:
+  # http listen address
+  addr: localhost:9694
+
+  # proof wait period, the value is how many documents can be proofed
+  period:
+    1m: 1000
+    10m: 10000
+    30m: 30000
+    1h: 60000
+    3h: 180000
+    12h: 720000
+    24h: 1440000
+
+##########################################################
+#
+# cache section
+#
+##########################################################
+cache:
+  # which type of cache will be used, only can be kafka/memory
+  type: memory
+
+  # if using kafka as cache
+  kafka:
+
+##########################################################
+#
+# persist section
+#
+##########################################################
+persist:
+  # which type of persist will be used, now only be fake
+  type: fake
+
+  # internal chan cap
+  chancap: 10000
+
+  # check cache interval
+  cacheCheckInterval: 30s
+
+  # how many documents put into DB together
+  queueSize: 100
+
+  # how long waitting for queue full, if timeout, even only one document, also put into DB
+  queueTimeout: 10s
+
+  # workers number
+  workers: 16
+
+  # fake section
+  fake:
+
