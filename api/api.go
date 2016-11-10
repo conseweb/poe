@@ -18,25 +18,27 @@ package api
 
 import (
 	"github.com/conseweb/poe/cache"
+	"github.com/conseweb/poe/persist"
 	"github.com/hyperledger/fabric/flogging"
-	"github.com/op/go-logging"
-	"github.com/spf13/viper"
 	"github.com/iris-contrib/middleware/logger"
 	"github.com/kataras/iris"
+	"github.com/op/go-logging"
+	"github.com/spf13/viper"
 )
 
 var (
-	apiLogger          = logging.MustGetLogger("api")
-	default_api_addr   = ":9694"
+	apiLogger        = logging.MustGetLogger("api")
+	default_api_addr = ":9694"
 )
 
 type APIServer struct {
-	irisapi *iris.Framework
-	cache   cache.CacheInterface
+	irisapi   *iris.Framework
+	cache     cache.CacheInterface
+	persister persist.PersistInterface
 }
 
 // NewAPIServer returns a api server, not started
-func NewAPIServer(cc cache.CacheInterface) *APIServer {
+func NewAPIServer(cc cache.CacheInterface, persister persist.PersistInterface) *APIServer {
 	flogging.LoggingInit("api")
 	server := new(APIServer)
 
@@ -46,12 +48,15 @@ func NewAPIServer(cc cache.CacheInterface) *APIServer {
 	// api v1
 	{
 		irisapi.Post("/api/v1/documents", server.submitRaw)
-		irisapi.Get("/api/v1/documents/:id", server.getProof)
+		irisapi.Get("/api/v1/documents/:id", server.getProofStatus)
 	}
 	server.irisapi = irisapi
 
 	// cache
 	server.cache = cc
+
+	// persister
+	server.persister = persister
 
 	return server
 }

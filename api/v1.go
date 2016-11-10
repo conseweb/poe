@@ -17,7 +17,6 @@ limitations under the License.
 package api
 
 import (
-	"net/http"
 	"time"
 
 	"github.com/kataras/iris"
@@ -25,13 +24,13 @@ import (
 
 // DocumentSubmitRequest
 type DocumentSubmitRequest struct {
-	ProofWaitPeriod string `json:"proof_wait_period" xml:"proof_wait_period" form:"proof_wait_period"`
-	RawDocument     string `json:"raw_document" xml:"raw_document" form:"raw_document"`
+	ProofWaitPeriod string `json:"proofWaitPeriod" xml:"proofWaitPeriod" form:"proofWaitPeriod"`
+	RawDocument     string `json:"rawDocument" xml:"rawDocument" form:"rawDocument"`
 }
 
 // DocumentSubmitResponse
 type DocumentSubmitResponse struct {
-	DocumentID string `json:"document_id"`
+	DocumentID string `json:"documentId"`
 }
 
 // submitRaw submits raw file into cache
@@ -52,7 +51,7 @@ func (srv *APIServer) submitRaw(ctx *iris.Context) {
 	docID, err := srv.cache.Put([]byte(doc.RawDocument), srv.cache.Topic(waitPeriod))
 	if err != nil {
 		apiLogger.Errorf("put sumit document into cache return error: %v", err)
-		ctx.EmitError(http.StatusBadRequest)
+		ctx.EmitError(iris.StatusBadRequest)
 		return
 	}
 	apiLogger.Debugf("document: %+v, document ID: %s", doc, docID)
@@ -62,7 +61,38 @@ func (srv *APIServer) submitRaw(ctx *iris.Context) {
 	})
 }
 
-// getProof returns data's exist proof
-func (srv *APIServer) getProof(ctx *iris.Context) {
+type GetProofStatusResponse struct {
+	Status              string `json:"status"` // none/wait/ok
+	DocumentID          string `json:"documentId,omitempty"`
+	DocumentBlockDigest string `json:"documentBlockDigest,omitempty"`
+}
 
+// getProofStatus returns document's exist proof status
+func (srv *APIServer) getProofStatus(ctx *iris.Context) {
+	documentID := ctx.Param("id")
+	if documentID == "" {
+		ctx.NotFound()
+		return
+	}
+
+	document, err := srv.persister.GetDocFromDBByDocID(documentID)
+	if err != nil {
+		apiLogger.Errorf("get document[%s] proof status return error: %v", err)
+		ctx.JSON(iris.StatusNotFound, &GetProofStatusResponse{
+			Status: "none",
+		})
+		return
+	}
+
+	response := &GetProofStatusResponse{
+		DocumentID: document.Id,
+	}
+	if document.BlockDigest != "" {
+		response.Status = "ok"
+	} else {
+		response.Status = "wait"
+	}
+	response.DocumentBlockDigest = document.BlockDigest
+
+	ctx.JSON(iris.StatusOK, response)
 }
