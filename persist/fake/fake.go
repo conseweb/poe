@@ -92,6 +92,23 @@ func (p *FakePersister) SetDocsBlockDigest(docIDs []string, digest string) error
 	return nil
 }
 
+func (p *FakePersister) FindDocsByBlockDigest(digest string) ([]*protos.Document, error) {
+	p.RLock()
+	defer p.RUnlock()
+
+	docIds, ok := p.blockDocs[digest]
+	if !ok {
+		return nil, fmt.Errorf("invalid digest %s", digest)
+	}
+
+	docs := make([]*protos.Document, len(docIds))
+	for idx, docId := range docIds {
+		docs[idx] = p.documents[docId]
+	}
+
+	return docs, nil
+}
+
 func (p *FakePersister) Close() error {
 	return nil
 }

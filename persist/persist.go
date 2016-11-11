@@ -50,6 +50,9 @@ type PersistInterface interface {
 	// SetDocsBlockDigest sets documents's blockDigest, which indicate where documents belongs to
 	SetDocsBlockDigest(docIDs []string, digest string) error
 
+	// FindDocsByBlockDigest finds documents belong to a same digest
+	FindDocsByBlockDigest(digest string) ([]*protos.Document, error)
+
 	// Close closes persister
 	Close() error
 }

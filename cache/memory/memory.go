@@ -44,7 +44,7 @@ func NewMemoryCache() *MemoryCache {
 }
 
 // put value into cache
-func (m *MemoryCache) Put(raw []byte, topic string) (string, error) {
+func (m *MemoryCache) Put(raw []byte, topic string) (*protos.Document, error) {
 	m.Lock()
 	defer m.Unlock()
 
@@ -53,17 +53,22 @@ func (m *MemoryCache) Put(raw []byte, topic string) (string, error) {
 		m.vals[topic] = make(map[string]*protos.Document)
 	}
 
-	id := utils.DocumentID(raw)
-	m.vals[topic][id] = &protos.Document{
-		Id:  id,
-		Raw: raw,
+	doc := &protos.Document{
+		Id:         m.DocumentID(raw),
+		Raw:        raw,
+		SubmitTime: time.Now().UTC().Unix(),
 	}
+	m.vals[topic][doc.Id] = doc
 
-	return id, nil
+	return doc, nil
 }
 
 func (m *MemoryCache) Topic(d time.Duration) string {
 	return fmt.Sprintf("topic_%s", d.String())
+}
+
+func (m *MemoryCache) DocumentID(rawData []byte) string {
+	return utils.DocumentID(rawData)
 }
 
 func (m *MemoryCache) Get(customer, topic string, count int64) ([]*protos.Document, error) {
