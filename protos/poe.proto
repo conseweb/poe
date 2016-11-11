@@ -10,4 +10,8 @@ message Document {
     bytes raw = 2;
     // hash(block)
     string blockDigest = 3;
+    // submit time
+    int64 submitTime = 4;
+    // proof time
+    int64 proofTime = 5;
 }

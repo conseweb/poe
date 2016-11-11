@@ -35,29 +35,29 @@ type DocumentSubmitResponse struct {
 
 // submitRaw submits raw file into cache
 func (srv *APIServer) submitRaw(ctx *iris.Context) {
-	doc := new(DocumentSubmitRequest)
-	if err := ctx.ReadForm(doc); err != nil {
+	req := new(DocumentSubmitRequest)
+	if err := ctx.ReadForm(req); err != nil {
 		apiLogger.Errorf("read submit document return error: %v", err)
 		ctx.Panic()
 		return
 	}
 
-	waitPeriod, err := time.ParseDuration(doc.ProofWaitPeriod)
+	waitPeriod, err := time.ParseDuration(req.ProofWaitPeriod)
 	if err != nil {
 		apiLogger.Errorf("parse submit proof wait period return error: %v", err)
 		ctx.Panic()
 		return
 	}
-	docID, err := srv.cache.Put([]byte(doc.RawDocument), srv.cache.Topic(waitPeriod))
+	doc, err := srv.cache.Put([]byte(req.RawDocument), srv.cache.Topic(waitPeriod))
 	if err != nil {
 		apiLogger.Errorf("put sumit document into cache return error: %v", err)
 		ctx.EmitError(iris.StatusBadRequest)
 		return
 	}
-	apiLogger.Debugf("document: %+v, document ID: %s", doc, docID)
+	apiLogger.Debugf("document: %+v, document ID: %s", req, doc.Id)
 
 	ctx.JSON(iris.StatusCreated, DocumentSubmitResponse{
-		DocumentID: docID,
+		DocumentID: doc.Id,
 	})
 }
 
@@ -77,7 +77,7 @@ func (srv *APIServer) getProofStatus(ctx *iris.Context) {
 
 	document, err := srv.persister.GetDocFromDBByDocID(documentID)
 	if err != nil {
-		apiLogger.Errorf("get document[%s] proof status return error: %v", err)
+		apiLogger.Errorf("get document[%s] return error: %v", err)
 		ctx.JSON(iris.StatusNotFound, &GetProofStatusResponse{
 			Status: "none",
 		})
@@ -95,4 +95,60 @@ func (srv *APIServer) getProofStatus(ctx *iris.Context) {
 	response.DocumentBlockDigest = document.BlockDigest
 
 	ctx.JSON(iris.StatusOK, response)
+}
+
+type GetProofRequest struct {
+	RawDocument string `json:"rawDocument" xml:"rawDocument" form:"rawDocument"`
+}
+
+type GetProofResponse struct {
+	Status     string `json:"status"` // invalid/wait/valid
+	DocumentId string `json:"documentId,omitempty"`
+	SubmitTime int64  `json:"submitTime,omitempty"`
+	ProofTime  int64  `json:"proofTime,omitempty"`
+}
+
+// getProof
+func (srv *APIServer) getProof(ctx *iris.Context) {
+	req := new(GetProofRequest)
+	if err := ctx.ReadForm(req); err != nil {
+		apiLogger.Errorf("read get proof document return error: %v", err)
+		ctx.Panic()
+		return
+	}
+
+	response := &GetProofResponse{}
+	// document id is made by cache, so always should to get document id though cacher
+	docId := srv.cache.DocumentID([]byte(req.RawDocument))
+
+	// get document info from persister, if error occurs, means that document has
+	doc, err := srv.persister.GetDocFromDBByDocID(docId)
+	if err != nil {
+		apiLogger.Errorf("get document[%s] return error: %v", err)
+		response.Status = "invalid"
+		ctx.JSON(iris.StatusNotFound, response)
+		return
+	}
+
+	// if document's blockDigest is blank, means blockchain has not proof exists
+	if doc.BlockDigest == "" {
+		response.Status = "wait"
+		response.DocumentId = doc.Id
+		response.SubmitTime = time.Unix(doc.SubmitTime, 0).Unix()
+		ctx.JSON(iris.StatusOK, response)
+		return
+	}
+
+	// based on document block digest, get all documents in same block
+	docs, err := srv.persister.FindDocsByBlockDigest(doc.BlockDigest)
+	if err != nil {
+		response.Status = "wait"
+		response.DocumentId = doc.Id
+		response.SubmitTime = time.Unix(doc.SubmitTime, 0).Unix()
+		ctx.JSON(iris.StatusInternalServerError, response)
+		return
+	}
+
+	// wrong
+	ctx.JSON(iris.StatusOK, docs)
 }
