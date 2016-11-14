@@ -24,6 +24,7 @@ import (
 	"github.com/op/go-logging"
 	"github.com/conseweb/poe/cache"
 	"github.com/conseweb/poe/persist"
+	"github.com/conseweb/poe/blockchain"
 )
 
 var (
@@ -44,8 +45,11 @@ func main() {
 	// persister
 	persister := persist.NewPersister(cc)
 
+	// blockchain
+	bc := blockchain.NewBlockchain(cc, persister)
+
 	// api server
-	apisrv := api.NewAPIServer(cc, persister)
+	apisrv := api.NewAPIServer(cc, persister, bc)
 	go apisrv.Start()
 
 	// handle signal

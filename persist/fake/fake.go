@@ -19,6 +19,7 @@ package fake
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/conseweb/poe/protos"
 )
@@ -84,9 +85,11 @@ func (p *FakePersister) SetDocsBlockDigest(docIDs []string, digest string) error
 		return fmt.Errorf("input params is invalid.")
 	}
 
+	nowTimeUnix := time.Now().UTC().Unix()
 	p.blockDocs[digest] = docIDs
 	for _, id := range docIDs {
 		p.documents[id].BlockDigest = digest
+		p.documents[id].ProofTime = nowTimeUnix
 	}
 
 	return nil
