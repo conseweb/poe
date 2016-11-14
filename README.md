@@ -59,13 +59,28 @@ Proof of Exists
 * rawDocument: 需要被证明的文件原始内容(字符串类型),当然如果不想传输机密文件内容,可先对数据进行加密混淆,相对应的在验证文件是否存在的时候也需要加密混淆
 
 #### 返回状态值
-200 404 500
+200 404
 
 #### 返回值(json)
 * status: 验证结果
     * invalid: 未被证明
     * wait: 等待被证明
     * valid: 已被证明
+    * none: 无此结果
 * documentId: 文件证明时分配的ID
 * submitTime: 文件提交时间(UTC 时间戳)
 * proofTime: 文件被证明时间(UTC 时间戳)
+
+## 模块架构
+
+### api
+对外接口
+
+### blockchain
+文件存在性证明,连接hyperledger fabric chaincode
+
+### cache
+缓存api请求
+
+### persist
+从cache获取documents进行持久化

@@ -102,7 +102,7 @@ type GetProofRequest struct {
 }
 
 type GetProofResponse struct {
-	Status     string `json:"status"` // invalid/wait/valid
+	Status     string `json:"status"` // none/wait/valid/invalid
 	DocumentId string `json:"documentId,omitempty"`
 	SubmitTime int64  `json:"submitTime,omitempty"`
 	ProofTime  int64  `json:"proofTime,omitempty"`
@@ -125,7 +125,7 @@ func (srv *APIServer) getProof(ctx *iris.Context) {
 	doc, err := srv.persister.GetDocFromDBByDocID(docId)
 	if err != nil {
 		apiLogger.Errorf("get document[%s] return error: %v", err)
-		response.Status = "invalid"
+		response.Status = "none"
 		ctx.JSON(iris.StatusNotFound, response)
 		return
 	}
@@ -134,21 +134,28 @@ func (srv *APIServer) getProof(ctx *iris.Context) {
 	if doc.BlockDigest == "" {
 		response.Status = "wait"
 		response.DocumentId = doc.Id
-		response.SubmitTime = time.Unix(doc.SubmitTime, 0).Unix()
+		response.SubmitTime = doc.SubmitTime
 		ctx.JSON(iris.StatusOK, response)
 		return
 	}
 
+	response.DocumentId = doc.Id
+	response.SubmitTime = doc.SubmitTime
 	// based on document block digest, get all documents in same block
 	docs, err := srv.persister.FindDocsByBlockDigest(doc.BlockDigest)
 	if err != nil {
-		response.Status = "wait"
-		response.DocumentId = doc.Id
-		response.SubmitTime = time.Unix(doc.SubmitTime, 0).Unix()
-		ctx.JSON(iris.StatusInternalServerError, response)
+		response.Status = "invalid"
+		ctx.JSON(iris.StatusOK, response)
 		return
 	}
 
-	// wrong
-	ctx.JSON(iris.StatusOK, docs)
+	// verify by blockchain
+	if srv.blcokchain.VerifyDocs(docs) {
+		response.Status = "valid"
+		response.ProofTime = doc.ProofTime
+	} else {
+		response.Status = "invalid"
+	}
+
+	ctx.JSON(iris.StatusOK, response)
 }

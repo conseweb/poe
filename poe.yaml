@@ -75,5 +75,5 @@ blockchain:
   # hyperledger fabric chaincode id
   chaincodeId: ojsldfjoiwejfasjdfoiwejfosjf939ew992jrkfj9
 
-  # peers, split up by ','
-  peers: localhost:8081,localhost:8392
+  # peers, split up by space
+  peers: localhost:8081 localhost:8392

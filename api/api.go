@@ -17,6 +17,7 @@ limitations under the License.
 package api
 
 import (
+	"github.com/conseweb/poe/blockchain"
 	"github.com/conseweb/poe/cache"
 	"github.com/conseweb/poe/persist"
 	"github.com/hyperledger/fabric/flogging"
@@ -32,13 +33,14 @@ var (
 )
 
 type APIServer struct {
-	irisapi   *iris.Framework
-	cache     cache.CacheInterface
-	persister persist.PersistInterface
+	irisapi    *iris.Framework
+	cache      cache.CacheInterface
+	persister  persist.PersistInterface
+	blcokchain *blockchain.Blockchain
 }
 
 // NewAPIServer returns a api server, not started
-func NewAPIServer(cc cache.CacheInterface, persister persist.PersistInterface) *APIServer {
+func NewAPIServer(cc cache.CacheInterface, persister persist.PersistInterface, bc *blockchain.Blockchain) *APIServer {
 	flogging.LoggingInit("api")
 	server := new(APIServer)
 
@@ -48,7 +50,8 @@ func NewAPIServer(cc cache.CacheInterface, persister persist.PersistInterface) *
 	// api v1
 	{
 		irisapi.Post("/api/v1/documents", server.submitRaw)
-		irisapi.Get("/api/v1/documents/:id", server.getProofStatus)
+		irisapi.Post("/api/v1/documents/result", server.getProof)
+		irisapi.Get("/api/v1/documents/:id/status", server.getProofStatus)
 	}
 	server.irisapi = irisapi
 
@@ -57,6 +60,9 @@ func NewAPIServer(cc cache.CacheInterface, persister persist.PersistInterface) *
 
 	// persister
 	server.persister = persister
+
+	// blockchain
+	server.blcokchain = bc
 
 	return server
 }

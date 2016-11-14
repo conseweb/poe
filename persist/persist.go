@@ -115,15 +115,19 @@ func continuePersist(cc cache.CacheInterface) {
 	// get documents from cache
 	getDocumentsFromCache := func(dc chan<- *protos.Document) {
 		for _, period := range periodLimits {
-			docs, err := cc.Get(persisterName, cc.Topic(period.Period), period.Limit)
-			if err != nil {
-				persistLogger.Warningf("get documents from cache return error: %v", err)
-				continue
-			}
+			go func(period *utils.PeriodLimit, dc chan<- *protos.Document) {
+				topic := cc.Topic(period.Period)
+				persistLogger.Infof("persister get topic[%s] documents", topic)
+				docs, err := cc.Get(persisterName, topic, period.Limit)
+				if err != nil {
+					//persistLogger.Warningf("get documents from cache return error: %v", err)
+					return
+				}
 
-			for _, doc := range docs {
-				dc <- doc
-			}
+				for _, doc := range docs {
+					dc <- doc
+				}
+			}(period, dc)
 		}
 	}
 
@@ -152,8 +156,6 @@ func continuePersist(cc cache.CacheInterface) {
 	for {
 		select {
 		case <-cacheCheckTicker.C:
-			persistLogger.Info("get documents from cacher...")
-
 			workerCtrl.Acquire()
 			go func() {
 				defer workerCtrl.Release()
