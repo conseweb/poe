@@ -24,6 +24,7 @@ import (
 	"github.com/hyperledger/fabric/flogging"
 	"github.com/op/go-logging"
 	"github.com/spf13/viper"
+	"github.com/conseweb/poe/cache/kafka"
 )
 
 var (
@@ -37,10 +38,10 @@ type CacheInterface interface {
 	Put(raw []byte, topic string) (*protos.Document, error)
 
 	// Get gets documents which related to `topic`, and the number of documents is `count`, if not enough, returns all
-	Get(customer, topic string, count int64) ([]*protos.Document, error)
+	Get(consumer, topic string, count int64) ([]*protos.Document, error)
 
-	// once the customer subscribed the topic, they will get documents which related to the topic
-	Subscribe(customer, topic string) bool
+	// once the consumer subscribed the topic, they will get documents which related to the topic
+	Subscribe(consumer, topic string) bool
 
 	// Topic returns which topic can be used based on proof_wait_period
 	Topic(d time.Duration) string
@@ -65,6 +66,7 @@ func NewCache() CacheInterface {
 
 	switch cacheName {
 	case "kafka":
+		return kafka.NewKafkaCache()
 	case "memory":
 		return memory.NewMemoryCache()
 	}

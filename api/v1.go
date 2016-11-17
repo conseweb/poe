@@ -38,14 +38,14 @@ func (srv *APIServer) submitRaw(ctx *iris.Context) {
 	req := new(DocumentSubmitRequest)
 	if err := ctx.ReadForm(req); err != nil {
 		apiLogger.Errorf("read submit document return error: %v", err)
-		ctx.Panic()
+		ctx.EmitError(iris.StatusBadRequest)
 		return
 	}
 
 	waitPeriod, err := time.ParseDuration(req.ProofWaitPeriod)
 	if err != nil {
 		apiLogger.Errorf("parse submit proof wait period return error: %v", err)
-		ctx.Panic()
+		ctx.EmitError(iris.StatusBadRequest)
 		return
 	}
 	doc, err := srv.cache.Put([]byte(req.RawDocument), srv.cache.Topic(waitPeriod))
@@ -54,7 +54,7 @@ func (srv *APIServer) submitRaw(ctx *iris.Context) {
 		ctx.EmitError(iris.StatusBadRequest)
 		return
 	}
-	apiLogger.Debugf("document: %+v, document ID: %s", req, doc.Id)
+	apiLogger.Debugf("document request: %v, document ID: %s", req, doc.Id)
 
 	ctx.JSON(iris.StatusCreated, DocumentSubmitResponse{
 		DocumentID: doc.Id,
