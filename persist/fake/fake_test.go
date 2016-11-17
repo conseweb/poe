@@ -41,12 +41,6 @@ func (t *FakePersisterTest) SetUpTest(c *check.C) {
 func (t *FakePersisterTest) TearDownTest(c *check.C) {
 }
 
-func (t *FakePersisterTest) TestGetPersisterName(c *check.C) {
-	p := NewFakePersister()
-	c.Check(p.GetPersisterName(), check.Equals, "fakePersister")
-	p.Close()
-}
-
 func (t *FakePersisterTest) TestPutDocsIntoDB(c *check.C) {
 	p := NewFakePersister()
 	docs := []*protos.Document{

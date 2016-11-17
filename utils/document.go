@@ -20,6 +20,7 @@ import (
 	"crypto/md5"
 	"crypto/sha256"
 	"fmt"
+	"time"
 
 	"github.com/conseweb/common/crypto"
 	"golang.org/x/crypto/sha3"
@@ -27,5 +28,10 @@ import (
 
 // DocumentID return doc unique id by using hash algos
 func DocumentID(doc []byte) string {
+	return fmt.Sprintf("%x", crypto.Hash(sha3.New512(), []byte(fmt.Sprintf("%x%x%d%d", crypto.Hash(sha256.New(), doc), crypto.Hash(md5.New(), doc), len(doc), time.Now().UTC().UnixNano()))))
+}
+
+// DocumentHash returns document hash, maybe not unique
+func DocumentHash(doc []byte) string  {
 	return fmt.Sprintf("%x", crypto.Hash(sha3.New512(), []byte(fmt.Sprintf("%x%x%d", crypto.Hash(sha256.New(), doc), crypto.Hash(md5.New(), doc), len(doc)))))
 }

@@ -9,6 +9,7 @@ logging:
   cache: debug
   kafka: debug
   persist: debug
+  cassandra: debug
 
 ##########################################################
 #
@@ -64,7 +65,7 @@ cache:
 ##########################################################
 persist:
   # which type of persist will be used, now only be fake
-  type: fake
+  type: cassandra
 
   # internal chan cap
   chancap: 10000
@@ -81,8 +82,15 @@ persist:
   # workers number
   workers: 16
 
-  # fake section
-  fake:
+  # cassandra section
+  cassandra:
+    # cassandra clusters
+    clusters: u2.mj u3.mj u4.mj
+
+    # cassandra keyspace
+    keyspace: poe
+
+
 
 #########################################################
 #
