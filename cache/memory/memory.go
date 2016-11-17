@@ -56,6 +56,7 @@ func (m *MemoryCache) Put(raw []byte, topic string) (*protos.Document, error) {
 	doc := &protos.Document{
 		Id:         m.DocumentID(raw),
 		Raw:        raw,
+		Hash:       m.DocumentHash(raw),
 		SubmitTime: time.Now().UTC().Unix(),
 	}
 	m.vals[topic][doc.Id] = doc
@@ -69,6 +70,10 @@ func (m *MemoryCache) Topic(d time.Duration) string {
 
 func (m *MemoryCache) DocumentID(rawData []byte) string {
 	return utils.DocumentID(rawData)
+}
+
+func (m *MemoryCache) DocumentHash(raw []byte) string {
+	return utils.DocumentHash(raw)
 }
 
 func (m *MemoryCache) Get(customer, topic string, count int64) ([]*protos.Document, error) {

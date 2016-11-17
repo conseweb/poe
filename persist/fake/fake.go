@@ -26,7 +26,6 @@ import (
 
 type FakePersister struct {
 	sync.RWMutex
-	name      string
 	documents map[string]*protos.Document
 	blockDocs map[string][]string
 }
@@ -34,19 +33,11 @@ type FakePersister struct {
 // NewFakePersister return a fake persister, just for development
 func NewFakePersister() *FakePersister {
 	persister := &FakePersister{
-		name:      "fakePersister",
 		documents: make(map[string]*protos.Document),
 		blockDocs: make(map[string][]string),
 	}
 
 	return persister
-}
-
-func (p *FakePersister) GetPersisterName() string {
-	p.RLock()
-	defer p.RUnlock()
-
-	return p.name
 }
 
 func (p *FakePersister) PutDocsIntoDB(docs []*protos.Document) error {
@@ -110,6 +101,10 @@ func (p *FakePersister) FindDocsByBlockDigest(digest string) ([]*protos.Document
 	}
 
 	return docs, nil
+}
+
+func (p *FakePersister) FindDocsByHash(hash string) ([]*protos.Document, error) {
+	return nil, nil
 }
 
 func (p *FakePersister) Close() error {

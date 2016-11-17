@@ -77,7 +77,7 @@ func (srv *APIServer) getProofStatus(ctx *iris.Context) {
 
 	document, err := srv.persister.GetDocFromDBByDocID(documentID)
 	if err != nil {
-		apiLogger.Errorf("get document[%s] return error: %v", err)
+		apiLogger.Errorf("get document[%s] return error: %v", documentID, err)
 		ctx.JSON(iris.StatusNotFound, &GetProofStatusResponse{
 			Status: "none",
 		})
@@ -119,17 +119,19 @@ func (srv *APIServer) getProof(ctx *iris.Context) {
 
 	response := &GetProofResponse{}
 	// document id is made by cache, so always should to get document id though cacher
-	docId := srv.cache.DocumentID([]byte(req.RawDocument))
+	docHash := srv.cache.DocumentHash([]byte(req.RawDocument))
 
 	// get document info from persister, if error occurs, means that document has
-	doc, err := srv.persister.GetDocFromDBByDocID(docId)
-	if err != nil {
-		apiLogger.Errorf("get document[%s] return error: %v", err)
+	docs, err := srv.persister.FindDocsByHash(docHash)
+	if err != nil || len(docs) == 0 {
+		apiLogger.Errorf("find document[%s] return error: %v", err)
 		response.Status = "none"
 		ctx.JSON(iris.StatusNotFound, response)
 		return
 	}
+	apiLogger.Debugf("find %d documents using same hash[%s]", len(docs), docHash)
 
+	doc := docs[0]
 	// if document's blockDigest is blank, means blockchain has not proof exists
 	if doc.BlockDigest == "" {
 		response.Status = "wait"
@@ -142,7 +144,7 @@ func (srv *APIServer) getProof(ctx *iris.Context) {
 	response.DocumentId = doc.Id
 	response.SubmitTime = doc.SubmitTime
 	// based on document block digest, get all documents in same block
-	docs, err := srv.persister.FindDocsByBlockDigest(doc.BlockDigest)
+	blockDocs, err := srv.persister.FindDocsByBlockDigest(doc.BlockDigest)
 	if err != nil {
 		response.Status = "invalid"
 		ctx.JSON(iris.StatusOK, response)
@@ -150,7 +152,7 @@ func (srv *APIServer) getProof(ctx *iris.Context) {
 	}
 
 	// verify by blockchain
-	if srv.blcokchain.VerifyDocs(docs) {
+	if srv.blcokchain.VerifyDocs(blockDocs) {
 		response.Status = "valid"
 		response.ProofTime = doc.ProofTime
 	} else {

@@ -59,7 +59,7 @@ func NewKafkaCache() *KafkaCache {
 	config := sarama.NewConfig()
 	config.Producer.RequiredAcks = sarama.WaitForAll
 	config.Producer.Retry.Max = viper.GetInt("cache.kafka.retry")
-	config.Consumer.Offsets.Initial = sarama.OffsetOldest
+	config.Consumer.Offsets.Initial = sarama.OffsetNewest
 	tlsConfig := createTlsConfiguration()
 	if tlsConfig != nil {
 		config.Net.TLS.Config = tlsConfig
@@ -101,6 +101,7 @@ func (k *KafkaCache) Put(raw []byte, topic string) (*protos.Document, error) {
 	doc := &protos.Document{
 		Id:         k.DocumentID(raw),
 		Raw:        raw,
+		Hash:       k.DocumentHash(raw),
 		SubmitTime: time.Now().UTC().Unix(),
 	}
 	docBytes, err := proto.Marshal(doc)
@@ -243,6 +244,10 @@ func (k *KafkaCache) Topic(d time.Duration) string {
 
 func (k *KafkaCache) DocumentID(rawData []byte) string {
 	return utils.DocumentID(rawData)
+}
+
+func (k *KafkaCache) DocumentHash(raw []byte) string {
+	return utils.DocumentHash(raw)
 }
 
 func (k *KafkaCache) Close() error {

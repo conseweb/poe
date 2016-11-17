@@ -46,8 +46,11 @@ type CacheInterface interface {
 	// Topic returns which topic can be used based on proof_wait_period
 	Topic(d time.Duration) string
 
-	// DocumentID returns
+	// DocumentID
 	DocumentID(rawData []byte) string
+
+	// DocumentHash
+	DocumentHash(raw []byte) string
 
 	// Close closes cache adapter, if error occurs, return it
 	Close() error

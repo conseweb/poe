@@ -21,6 +21,7 @@ import (
 
 	"github.com/conseweb/common/semaphore"
 	"github.com/conseweb/poe/cache"
+	"github.com/conseweb/poe/persist/cassandra"
 	"github.com/conseweb/poe/persist/fake"
 	"github.com/conseweb/poe/protos"
 	"github.com/conseweb/poe/utils"
@@ -30,16 +31,13 @@ import (
 )
 
 var (
-	default_persister_name  = ""
+	default_persister_name  = "leveldb"
 	default_persistChan_cap = 10000
 	persistLogger           = logging.MustGetLogger("persist")
 )
 
 // PersistInterface
 type PersistInterface interface {
-
-	// GetPersisterName get persister name
-	GetPersisterName() string
 
 	// PutDocsIntoDB puts documents into database
 	PutDocsIntoDB(docs []*protos.Document) error
@@ -52,6 +50,9 @@ type PersistInterface interface {
 
 	// FindDocsByBlockDigest finds documents belong to a same digest
 	FindDocsByBlockDigest(digest string) ([]*protos.Document, error)
+
+	// FindDocsByHash
+	FindDocsByHash(hash string) ([]*protos.Document, error)
 
 	// Close closes persister
 	Close() error
@@ -69,6 +70,8 @@ func NewPersister(cc cache.CacheInterface) PersistInterface {
 	switch persisterName {
 	case "fake":
 		persister = fake.NewFakePersister()
+	case "cassandra":
+		persister = cassandra.NewCassandraPersister()
 	default:
 		persistLogger.Fatalf("unsupported persist type %s", persisterName)
 	}
@@ -85,7 +88,7 @@ var (
 
 // pull data from cache, push data into database
 func continuePersist(cc cache.CacheInterface) {
-	persisterName := persister.GetPersisterName()
+	persisterName := "persister"
 	// cache customer subscribe cache topic
 	periodLimits := utils.GetPeriodLimits()
 	// semaphore control
