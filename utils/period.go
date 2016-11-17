@@ -27,6 +27,7 @@ import (
 var (
 	periodLimits []*PeriodLimit
 	once         = &sync.Once{}
+	mutex        = &sync.RWMutex{}
 )
 
 type PeriodLimit struct {
@@ -40,11 +41,17 @@ func GetPeriodLimits() []*PeriodLimit {
 		periodLimits = loadPeriodLimitsFromConfig()
 	})
 
+	mutex.RLock()
+	defer mutex.RUnlock()
+
 	return periodLimits
 }
 
 // LoadPeriodLimitsFromConfig
 func loadPeriodLimitsFromConfig() []*PeriodLimit {
+	mutex.Lock()
+	defer mutex.Unlock()
+
 	periodLimitStrs := viper.GetStringMapString("api.period")
 
 	limits := make([]*PeriodLimit, 0)

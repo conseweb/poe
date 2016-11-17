@@ -7,6 +7,8 @@ logging:
   main: debug
   api: debug
   cache: debug
+  kafka: debug
+  persist: debug
 
 ##########################################################
 #
@@ -20,12 +22,12 @@ api:
   # proof wait period, the value is how many documents can be proofed
   period:
     1m: 1000
-    10m: 10000
-    30m: 30000
-    1h: 60000
-    3h: 180000
-    12h: 720000
-    24h: 1440000
+#    10m: 10000
+#    30m: 30000
+#    1h: 60000
+#    3h: 180000
+#    12h: 720000
+#    24h: 1440000
 
 ##########################################################
 #
@@ -34,10 +36,26 @@ api:
 ##########################################################
 cache:
   # which type of cache will be used, only can be kafka/memory
-  type: memory
+  type: kafka
 
   # if using kafka as cache
   kafka:
+    # broker list
+    brokers: 192.168.5.101:9092 192.168.5.102:9092 192.168.5.103:9092
+
+    # max retry time
+    retry: 10
+
+    # tls setting
+    tls:
+      # cert file
+      certFile:
+      # key file
+      keyFile:
+      # ca file
+      caFile:
+      # whether a client verifies the server's certificate chain and host name
+      insecureSkipVerify: false
 
 ##########################################################
 #
@@ -52,7 +70,7 @@ persist:
   chancap: 10000
 
   # check cache interval
-  cacheCheckInterval: 30s
+  cacheCheckInterval: 3s
 
   # how many documents put into DB together
   queueSize: 100

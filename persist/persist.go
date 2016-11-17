@@ -108,23 +108,20 @@ func continuePersist(cc cache.CacheInterface) {
 
 	// cache customer subscribe cache topic
 	periodLimits := utils.GetPeriodLimits()
-	for _, period := range periodLimits {
-		cc.Subscribe(persisterName, cc.Topic(period.Period))
-	}
 
 	// get documents from cache
 	getDocumentsFromCache := func(dc chan<- *protos.Document) {
 		for _, period := range periodLimits {
 			go func(period *utils.PeriodLimit, dc chan<- *protos.Document) {
 				topic := cc.Topic(period.Period)
-				persistLogger.Infof("persister get topic[%s] documents", topic)
 				docs, err := cc.Get(persisterName, topic, period.Limit)
 				if err != nil {
-					//persistLogger.Warningf("get documents from cache return error: %v", err)
+					persistLogger.Warningf("get topic %s documents from cache return error: %v", topic, err)
 					return
 				}
 
-				for _, doc := range docs {
+				for idx, doc := range docs {
+					persistLogger.Debugf("doc[%d] from cache: %v",idx, doc)
 					dc <- doc
 				}
 			}(period, dc)
@@ -152,7 +149,7 @@ func continuePersist(cc cache.CacheInterface) {
 	queueSize := viper.GetInt("persist.queueSize")
 	queueTimeoutTicker := time.NewTicker(viper.GetDuration("persist.queueTimeout"))
 
-	persistLogger.Info("the persister is persisting documents into db...")
+	persistLogger.Info("persister is persisting documents into db from cache")
 	for {
 		select {
 		case <-cacheCheckTicker.C:

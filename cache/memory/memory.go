@@ -64,7 +64,7 @@ func (m *MemoryCache) Put(raw []byte, topic string) (*protos.Document, error) {
 }
 
 func (m *MemoryCache) Topic(d time.Duration) string {
-	return fmt.Sprintf("topic_%s", d.String())
+	return fmt.Sprintf("memory_%s", d.String())
 }
 
 func (m *MemoryCache) DocumentID(rawData []byte) string {
