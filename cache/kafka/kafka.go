@@ -147,7 +147,6 @@ outer:
 		case doc := <-docsChan:
 			count--
 			docs = append(docs, doc)
-
 		default:
 			break outer
 		}

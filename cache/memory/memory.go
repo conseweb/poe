@@ -72,12 +72,13 @@ func (m *MemoryCache) DocumentID(rawData []byte) string {
 }
 
 func (m *MemoryCache) Get(customer, topic string, count int64) ([]*protos.Document, error) {
+	if !m.customerTopics[customer][topic] {
+		if !m.Subscribe(customer, topic) {
+			return nil, fmt.Errorf("customer %s didn't subscribe topic %s", customer, topic)
+		}
+	}
 	m.Lock()
 	defer m.Unlock()
-
-	if !m.customerTopics[customer][topic] {
-		return nil, fmt.Errorf("customer %s didn't subscribe topic %s", customer, topic)
-	}
 
 	docs := make([]*protos.Document, 0)
 	topicDocs, ok := m.vals[topic]

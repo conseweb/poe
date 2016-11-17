@@ -77,37 +77,19 @@ func NewPersister(cc cache.CacheInterface) PersistInterface {
 	return persister
 }
 
-// ClosePersister close persister
-func ClosePersister() error {
-	persistLogger.Info("persister is stopping...")
-	defer persistLogger.Info("persister is stopped.")
-
-	closeChan <- 1
-	for {
-		if len(docsChan) > 0 || len(docQueue) > 0 {
-			time.Sleep(time.Second)
-			continue
-		}
-
-		break
-	}
-
-	return persister.Close()
-}
-
 var (
 	docsChan  chan *protos.Document
 	docQueue  []*protos.Document
 	persister PersistInterface
-	closeChan = make(chan int)
 )
 
 // pull data from cache, push data into database
 func continuePersist(cc cache.CacheInterface) {
 	persisterName := persister.GetPersisterName()
-
 	// cache customer subscribe cache topic
 	periodLimits := utils.GetPeriodLimits()
+	// semaphore control
+	workerCtrl := semaphore.NewSemaphore(viper.GetInt("persist.workers"))
 
 	// get documents from cache
 	getDocumentsFromCache := func(dc chan<- *protos.Document) {
@@ -121,7 +103,7 @@ func continuePersist(cc cache.CacheInterface) {
 				}
 
 				for idx, doc := range docs {
-					persistLogger.Debugf("doc[%d] from cache: %v",idx, doc)
+					persistLogger.Debugf("doc[%d] from cache: %v", idx, doc.Id)
 					dc <- doc
 				}
 			}(period, dc)
@@ -130,11 +112,16 @@ func continuePersist(cc cache.CacheInterface) {
 
 	// put documents into database
 	putDocumentsIntoDB := func(docs []*protos.Document) {
-		persister.PutDocsIntoDB(docs)
-	}
+		dstDocs := make([]*protos.Document, len(docs))
+		copy(dstDocs, docs)
 
-	// semaphore control
-	workerCtrl := semaphore.NewSemaphore(viper.GetInt("persist.workers"))
+		workerCtrl.Acquire()
+		go func() {
+			defer workerCtrl.Release()
+
+			persister.PutDocsIntoDB(dstDocs)
+		}()
+	}
 
 	// internal documents transfer chan
 	chanCap := viper.GetInt("persist.chancap")
@@ -165,13 +152,7 @@ func continuePersist(cc cache.CacheInterface) {
 			}
 
 			persistLogger.Debugf("documents queue is full, put %d documents into DB", len(docQueue))
-			dstDocs := make([]*protos.Document, len(docQueue))
-			copy(dstDocs, docQueue)
-			workerCtrl.Acquire()
-			go func() {
-				defer workerCtrl.Release()
-				putDocumentsIntoDB(dstDocs)
-			}()
+			putDocumentsIntoDB(docQueue)
 			docQueue = make([]*protos.Document, 0)
 		case <-queueTimeoutTicker.C:
 			if len(docQueue) == 0 {
@@ -179,16 +160,25 @@ func continuePersist(cc cache.CacheInterface) {
 			}
 
 			persistLogger.Debugf("documents queue timeout, put %d documents into DB", len(docQueue))
-			dstDocs := make([]*protos.Document, len(docQueue))
-			copy(dstDocs, docQueue)
-			workerCtrl.Acquire()
-			go func() {
-				defer workerCtrl.Release()
-				putDocumentsIntoDB(dstDocs)
-			}()
+			putDocumentsIntoDB(docQueue)
 			docQueue = make([]*protos.Document, 0)
-		case <-closeChan:
-			close(docsChan)
 		}
 	}
+}
+
+// Close close persister
+func Close() error {
+	persistLogger.Info("persister is stopping...")
+	defer persistLogger.Info("persister is stopped.")
+
+	for {
+		if len(docsChan) > 0 || len(docQueue) > 0 {
+			time.Sleep(time.Millisecond * 50)
+			continue
+		}
+
+		break
+	}
+
+	return persister.Close()
 }

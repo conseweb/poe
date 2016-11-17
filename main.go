@@ -53,5 +53,5 @@ func main() {
 	go apisrv.Start()
 
 	// handle signal
-	exec.HandleSignal(apisrv.Stop, persist.ClosePersister, cc.Close)
+	exec.HandleSignal(apisrv.Stop, persist.Close, cc.Close)
 }
