@@ -20,6 +20,7 @@ import (
 	"gopkg.in/check.v1"
 	"testing"
 	"fmt"
+	"time"
 )
 
 func TestAll(t *testing.T) {
@@ -35,34 +36,29 @@ func (t *MemoryCacheTest) TestPut(c *check.C) {
 	cache := NewMemoryCache()
 	defer cache.Close()
 
-	cache.Put([]byte("raw"), "test")
-	cache.Put([]byte("raw1"), "test")
+	cache.Put([]byte("raw"), time.Minute)
+	cache.Put([]byte("raw1"), time.Minute)
 
 	c.Check(len(cache.vals), check.Equals, 1)
-	c.Check(len(cache.vals["test"]), check.Equals, 2)
+	c.Check(len(cache.vals[cache.Topic(time.Minute)]), check.Equals, 2)
 }
 
 func (t *MemoryCacheTest) TestClose(c *check.C) {
 	cache := NewMemoryCache()
-	cache.Put([]byte("raw"), "test")
-	cache.Put([]byte("raw1"), "test")
+	cache.Put([]byte("raw"), time.Minute)
+	cache.Put([]byte("raw1"), time.Minute)
 
 	cache.Close()
 
 	c.Check(len(cache.vals), check.Equals, 0)
-	c.Check(cache.vals["test"], check.IsNil)
+	c.Check(cache.vals[cache.Topic(time.Minute)], check.IsNil)
 }
 
 func (t *MemoryCacheTest) BenchmarkPut(c *check.C) {
 	cache := NewMemoryCache()
 	defer cache.Close()
 
-	topic := "topic0"
 	for i := 0; i < c.N; i++ {
-		if i % 10 == 0 {
-			topic = fmt.Sprintf("topic%d", i)
-		}
-
-		cache.Put([]byte(fmt.Sprintf("raw%d", i)), topic)
+		cache.Put([]byte(fmt.Sprintf("raw%d", i)), time.Minute)
 	}
 }

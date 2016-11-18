@@ -40,7 +40,7 @@ var (
 
 // kafka cache
 type KafkaCache struct {
-	sync.RWMutex
+	sync.Mutex
 	brokers                 []string
 	topics                  []string
 	config                  *sarama.Config
@@ -97,12 +97,14 @@ func NewKafkaCache() *KafkaCache {
 	return cache
 }
 
-func (k *KafkaCache) Put(raw []byte, topic string) (*protos.Document, error) {
+func (k *KafkaCache) Put(raw []byte, waitDuration time.Duration) (*protos.Document, error) {
+	topic := k.Topic(waitDuration)
 	doc := &protos.Document{
-		Id:         k.DocumentID(raw),
-		Raw:        raw,
-		Hash:       k.DocumentHash(raw),
-		SubmitTime: time.Now().UTC().Unix(),
+		Id:           k.DocumentID(raw),
+		Raw:          raw,
+		Hash:         k.DocumentHash(raw),
+		SubmitTime:   time.Now().UTC().Unix(),
+		WaitDuration: int64(waitDuration),
 	}
 	docBytes, err := proto.Marshal(doc)
 	if err != nil {
@@ -157,6 +159,9 @@ outer:
 }
 
 func (k *KafkaCache) Subscribe(consumerName, topic string) bool {
+	k.Lock()
+	defer k.Unlock()
+
 	exist := false
 	for _, t := range k.topics {
 		if t == topic {
@@ -227,7 +232,9 @@ func (k *KafkaCache) constructTopicConsumerDocsChan(topic, consumerName string) 
 	if _, ok := k.topicConsumersDocsChans[topic][consumerName]; !ok {
 		for _, period := range utils.GetPeriodLimits() {
 			if k.Topic(period.Period) == topic {
+				k.Lock()
 				k.topicConsumersDocsChans[topic][consumerName] = make(chan *protos.Document, period.Limit)
+				k.Unlock()
 				return
 			}
 		}

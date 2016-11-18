@@ -16,4 +16,6 @@ message Document {
     int64 proofTime = 5;
     // document hash
     string hash = 6;
+    // wait time
+    int64 waitDuration = 7;
 }

@@ -37,7 +37,8 @@ CREATE TABLE documents (
 	hash text,
 	blockDigest text,
 	submitTime bigint,
-	proofTime bigint
+	proofTime bigint,
+	waitDuration int
 );
 
 CREATE INDEX ON poe.documents(hash);
@@ -67,7 +68,7 @@ func NewCassandraPersister() *CassandraPersister {
 
 func (c *CassandraPersister) PutDocsIntoDB(docs []*protos.Document) error {
 	for _, doc := range docs {
-		if err := c.session.Query(`INSERT INTO documents(id, hash, submitTime) VALUES(?, ?, ?)`, doc.Id, doc.Hash, doc.SubmitTime).Exec(); err != nil {
+		if err := c.session.Query(`INSERT INTO documents(id, hash, submitTime, waitDuration) VALUES(?, ?, ?, ?)`, doc.Id, doc.Hash, doc.SubmitTime, doc.WaitDuration).Exec(); err != nil {
 			cassandraLogger.Warningf("put doc[%s] into DB return error: %v", doc.Id, err)
 		}
 	}
@@ -81,7 +82,7 @@ func (c *CassandraPersister) GetDocFromDBByDocID(docID string) (*protos.Document
 	}
 
 	doc := &protos.Document{}
-	if err := c.session.Query(`SELECT id, hash, blockDigest, submitTime, proofTime FROM documents WHERE id = ? LIMIT 1`, docID).Consistency(gocql.One).Scan(&doc.Id, &doc.Hash, &doc.BlockDigest, &doc.SubmitTime, &doc.ProofTime); err != nil {
+	if err := c.session.Query(`SELECT id, hash, blockDigest, submitTime, proofTime, waitDuration FROM documents WHERE id = ? LIMIT 1`, docID).Consistency(gocql.One).Scan(&doc.Id, &doc.Hash, &doc.BlockDigest, &doc.SubmitTime, &doc.ProofTime, &doc.WaitDuration); err != nil {
 		cassandraLogger.Warningf("get document[%s] from Db return error: %v", docID, err)
 		return nil, err
 	}
@@ -108,11 +109,11 @@ func (c *CassandraPersister) FindDocsByBlockDigest(digest string) ([]*protos.Doc
 		return nil, fmt.Errorf("invalid digest")
 	}
 
-	iter := c.session.Query("SELECT id, hash, blockDigest, submitTime, proofTime FROM documents WHERE blockDigest = ?", digest).Iter()
+	iter := c.session.Query("SELECT id, hash, blockDigest, submitTime, proofTime, waitDuration FROM documents WHERE blockDigest = ?", digest).Iter()
 	docs := make([]*protos.Document, 0)
 	for {
 		doc := &protos.Document{}
-		if !iter.Scan(&doc.Id, &doc.Hash, &doc.BlockDigest, &doc.SubmitTime, &doc.ProofTime) {
+		if !iter.Scan(&doc.Id, &doc.Hash, &doc.BlockDigest, &doc.SubmitTime, &doc.ProofTime, &doc.WaitDuration) {
 			break
 		}
 		docs = append(docs, doc)
@@ -129,11 +130,11 @@ func (c *CassandraPersister) FindDocsByHash(hash string) ([]*protos.Document, er
 		return nil, fmt.Errorf("invalid hash")
 	}
 
-	iter := c.session.Query("SELECT id, hash, blockDigest, submitTime, proofTime FROM documents WHERE hash = ?", hash).Iter()
+	iter := c.session.Query("SELECT id, hash, blockDigest, submitTime, proofTime, waitDuration FROM documents WHERE hash = ?", hash).Iter()
 	docs := make([]*protos.Document, 0)
 	for {
 		doc := &protos.Document{}
-		if !iter.Scan(&doc.Id, &doc.Hash, &doc.BlockDigest, &doc.SubmitTime, &doc.ProofTime) {
+		if !iter.Scan(&doc.Id, &doc.Hash, &doc.BlockDigest, &doc.SubmitTime, &doc.ProofTime, &doc.WaitDuration) {
 			break
 		}
 		docs = append(docs, doc)

@@ -44,20 +44,22 @@ func NewMemoryCache() *MemoryCache {
 }
 
 // put value into cache
-func (m *MemoryCache) Put(raw []byte, topic string) (*protos.Document, error) {
+func (m *MemoryCache) Put(raw []byte, waitDuration time.Duration) (*protos.Document, error) {
 	m.Lock()
 	defer m.Unlock()
 
+	topic := m.Topic(waitDuration)
 	_, ok := m.vals[topic]
 	if !ok {
 		m.vals[topic] = make(map[string]*protos.Document)
 	}
 
 	doc := &protos.Document{
-		Id:         m.DocumentID(raw),
-		Raw:        raw,
-		Hash:       m.DocumentHash(raw),
-		SubmitTime: time.Now().UTC().Unix(),
+		Id:           m.DocumentID(raw),
+		Raw:          raw,
+		Hash:         m.DocumentHash(raw),
+		SubmitTime:   time.Now().UTC().Unix(),
+		WaitDuration: int64(waitDuration),
 	}
 	m.vals[topic][doc.Id] = doc
 

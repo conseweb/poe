@@ -30,7 +30,8 @@ type DocumentSubmitRequest struct {
 
 // DocumentSubmitResponse
 type DocumentSubmitResponse struct {
-	DocumentID string `json:"documentId"`
+	DocumentID       string `json:"documentId"`
+	PerdictProofTime int64  `json:"perdictProofTime"`
 }
 
 // submitRaw submits raw file into cache
@@ -48,7 +49,7 @@ func (srv *APIServer) submitRaw(ctx *iris.Context) {
 		ctx.EmitError(iris.StatusBadRequest)
 		return
 	}
-	doc, err := srv.cache.Put([]byte(req.RawDocument), srv.cache.Topic(waitPeriod))
+	doc, err := srv.cache.Put([]byte(req.RawDocument), waitPeriod)
 	if err != nil {
 		apiLogger.Errorf("put sumit document into cache return error: %v", err)
 		ctx.EmitError(iris.StatusBadRequest)
@@ -57,7 +58,8 @@ func (srv *APIServer) submitRaw(ctx *iris.Context) {
 	apiLogger.Debugf("document request: %v, document ID: %s", req, doc.Id)
 
 	ctx.JSON(iris.StatusCreated, DocumentSubmitResponse{
-		DocumentID: doc.Id,
+		DocumentID:       doc.Id,
+		PerdictProofTime: time.Unix(doc.SubmitTime, 0).UTC().Add(time.Duration(doc.WaitDuration)).Unix(),
 	})
 }
 
@@ -65,6 +67,8 @@ type GetProofStatusResponse struct {
 	Status              string `json:"status"` // none/wait/ok
 	DocumentID          string `json:"documentId,omitempty"`
 	DocumentBlockDigest string `json:"documentBlockDigest,omitempty"`
+	PerdictProofTime    int64  `json:"perdictProofTime,omitempty"`
+	ProofTime           int64  `json:"proofTime,omitempty"`
 }
 
 // getProofStatus returns document's exist proof status
@@ -75,7 +79,7 @@ func (srv *APIServer) getProofStatus(ctx *iris.Context) {
 		return
 	}
 
-	document, err := srv.persister.GetDocFromDBByDocID(documentID)
+	doc, err := srv.persister.GetDocFromDBByDocID(documentID)
 	if err != nil {
 		apiLogger.Errorf("get document[%s] return error: %v", documentID, err)
 		ctx.JSON(iris.StatusNotFound, &GetProofStatusResponse{
@@ -85,14 +89,16 @@ func (srv *APIServer) getProofStatus(ctx *iris.Context) {
 	}
 
 	response := &GetProofStatusResponse{
-		DocumentID: document.Id,
+		DocumentID: doc.Id,
 	}
-	if document.BlockDigest != "" {
+	if doc.BlockDigest != "" {
 		response.Status = "ok"
+		response.ProofTime = doc.ProofTime
 	} else {
 		response.Status = "wait"
+		response.PerdictProofTime = time.Unix(doc.SubmitTime, 0).UTC().Add(time.Duration(doc.WaitDuration)).Unix()
 	}
-	response.DocumentBlockDigest = document.BlockDigest
+	response.DocumentBlockDigest = doc.BlockDigest
 
 	ctx.JSON(iris.StatusOK, response)
 }
@@ -102,10 +108,11 @@ type GetProofRequest struct {
 }
 
 type GetProofResponse struct {
-	Status     string `json:"status"` // none/wait/valid/invalid
-	DocumentId string `json:"documentId,omitempty"`
-	SubmitTime int64  `json:"submitTime,omitempty"`
-	ProofTime  int64  `json:"proofTime,omitempty"`
+	Status           string `json:"status"` // none/wait/valid/invalid
+	DocumentId       string `json:"documentId,omitempty"`
+	SubmitTime       int64  `json:"submitTime,omitempty"`
+	ProofTime        int64  `json:"proofTime,omitempty"`
+	PerdictProofTime int64  `json:"perdictProofTime,omitempty"`
 }
 
 // getProof
@@ -137,6 +144,7 @@ func (srv *APIServer) getProof(ctx *iris.Context) {
 		response.Status = "wait"
 		response.DocumentId = doc.Id
 		response.SubmitTime = doc.SubmitTime
+		response.PerdictProofTime = time.Unix(doc.SubmitTime, 0).UTC().Add(time.Duration(doc.WaitDuration)).Unix()
 		ctx.JSON(iris.StatusOK, response)
 		return
 	}
