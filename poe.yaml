@@ -10,6 +10,7 @@ logging:
   kafka: debug
   persist: debug
   cassandra: debug
+  leveldb: debug
 
 ##########################################################
 #
@@ -64,8 +65,8 @@ cache:
 #
 ##########################################################
 persist:
-  # which type of persist will be used, now only be fake
-  type: cassandra
+  # which type of persist will be used, fake/cassandra/leveldb
+  type: leveldb
 
   # internal chan cap
   chancap: 10000
@@ -90,7 +91,10 @@ persist:
     # cassandra keyspace
     keyspace: poe
 
-
+  # leveldb section
+  leveldb:
+    # which folder to store leveldb file
+    folder: testdata/leveldb
 
 #########################################################
 #

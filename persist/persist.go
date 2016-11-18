@@ -23,6 +23,7 @@ import (
 	"github.com/conseweb/poe/cache"
 	"github.com/conseweb/poe/persist/cassandra"
 	"github.com/conseweb/poe/persist/fake"
+	"github.com/conseweb/poe/persist/leveldb"
 	"github.com/conseweb/poe/protos"
 	"github.com/conseweb/poe/utils"
 	"github.com/hyperledger/fabric/flogging"
@@ -72,6 +73,8 @@ func NewPersister(cc cache.CacheInterface) PersistInterface {
 		persister = fake.NewFakePersister()
 	case "cassandra":
 		persister = cassandra.NewCassandraPersister()
+	case "leveldb":
+		persister = leveldb.NewLevelDBPersister()
 	default:
 		persistLogger.Fatalf("unsupported persist type %s", persisterName)
 	}
