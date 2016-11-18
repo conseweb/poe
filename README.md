@@ -22,6 +22,7 @@ Proof of Exists
 
 #### 返回值(json)
 * documentId: 文件对应ID,此ID仅用于平台在证明过程中查询文件的证明状态,不可作为文件存在的凭证
+* perdictProofTime: 预计文件能被证明的UTC时间戳
 
 ### GET /api/v1/documents/:id/status
 查询文件存在性证明过程
@@ -45,6 +46,8 @@ Proof of Exists
     * ok: 文件已经进行了存在性证明
 * documentId: 输入的路径参数,直接返回
 * documentBlockDigest: 文件证明所返回的摘要信息
+* perdictProofTime: 如果状态是等待中,则显示预计的证明时间
+* proofTime: 如果状态是已证明,则显示证明时间
 
 ### POST /api/v1/documents/result
 验证文件的存在性
@@ -70,6 +73,7 @@ Proof of Exists
 * documentId: 文件证明时分配的ID
 * submitTime: 文件提交时间(UTC 时间戳)
 * proofTime: 文件被证明时间(UTC 时间戳)
+* perdictProofTime: 当状态为等待被证明时,预计被证明的时间(UTC 时间戳)
 
 ## 模块架构
 

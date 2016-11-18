@@ -35,7 +35,7 @@ var (
 // cache request
 type CacheInterface interface {
 	// Put puts raw data into cache, separated by topic.
-	Put(raw []byte, topic string) (*protos.Document, error)
+	Put(raw []byte, waitDuration time.Duration) (*protos.Document, error)
 
 	// Get gets documents which related to `topic`, and the number of documents is `count`, if not enough, returns all
 	Get(consumer, topic string, count int64) ([]*protos.Document, error)
