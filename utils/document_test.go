@@ -31,10 +31,10 @@ type DocumentTest struct {
 
 var _ = check.Suite(&DocumentTest{})
 
-func (t *DocumentTest) TestDocumentID(c *check.C) {
+func (t *DocumentTest) TestDocumentHash(c *check.C) {
 	str := "dflsjfoiwefjlasfffdfjjfggjhjhggdsdfadjfoiewffjkhkjalsdjfoiewasjdfjewoiosdjff"
 	id := "e568851e15a09b5e80f0caa11dda549ce0f5e56f0ddca530857ba94e483283423d403e7110c1eff6716d6db01d71813b469a0fd870d7d524a131cd6c40a30d9b"
-	c.Check(DocumentID([]byte(str)), check.Equals, id)
+	c.Check(DocumentHash([]byte(str)), check.Equals, id)
 }
 
 func (t *DocumentTest) BenchmarkDocumentID(c *check.C) {
@@ -42,3 +42,10 @@ func (t *DocumentTest) BenchmarkDocumentID(c *check.C) {
 		DocumentID([]byte(fmt.Sprintf("sdfjiwjeflsajdfi9jsdfijisdf_%d", i)))
 	}
 }
+
+func (t *DocumentTest) BenchmarkDocumentHash(c *check.C) {
+	for i := 0; i < c.N; i++ {
+		DocumentHash([]byte(fmt.Sprintf("sdfjiwjeflsajdfi9jsdfijisdf_%d", i)))
+	}
+}
+
