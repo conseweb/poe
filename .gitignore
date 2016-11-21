@@ -26,3 +26,4 @@ _testmain.go
 poe
 docker
 testdata
+integration-tests/integration-tests
