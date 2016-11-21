@@ -20,11 +20,11 @@ import (
 	"github.com/conseweb/common/config"
 	"github.com/conseweb/common/exec"
 	"github.com/conseweb/poe/api"
-	"github.com/hyperledger/fabric/flogging"
-	"github.com/op/go-logging"
+	"github.com/conseweb/poe/blockchain"
 	"github.com/conseweb/poe/cache"
 	"github.com/conseweb/poe/persist"
-	"github.com/conseweb/poe/blockchain"
+	"github.com/hyperledger/fabric/flogging"
+	"github.com/op/go-logging"
 )
 
 var (
@@ -47,11 +47,11 @@ func main() {
 
 	// blockchain
 	bc := blockchain.NewBlockchain(cc, persister)
-
+	go bc.EventStart()
 	// api server
 	apisrv := api.NewAPIServer(cc, persister, bc)
 	go apisrv.Start()
 
 	// handle signal
-	exec.HandleSignal(apisrv.Stop, persist.Close, cc.Close)
+	exec.HandleSignal(apisrv.Stop, persist.Close, cc.Close, bc.Close)
 }

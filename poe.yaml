@@ -103,7 +103,16 @@ persist:
 #########################################################
 blockchain:
   # hyperledger fabric chaincode id
-  chaincodeId: ojsldfjoiwejfasjdfoiwejfosjf939ew992jrkfj9
+  #chaincodeId: ojsldfjoiwejfasjdfoiwejfosjf939ew992jrkfj9
 
   # peers, split up by space
-  peers: localhost:8081 localhost:8392
+  #peers: localhost:8081 localhost:8392
+  peer_address: 0.0.0.0:7051
+  event_address: 0.0.0.0:7053 
+  reg_timeout: 3s
+  wrapper: {
+    "name":"poe_cc_demo_001",
+    "path":"github.com/conseweb/common/assets/poe",
+    "language":"GOLANG",
+    "secureContext":"jim"
+  }
