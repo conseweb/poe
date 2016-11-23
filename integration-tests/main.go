@@ -21,10 +21,10 @@ import (
 	"time"
 
 	"github.com/conseweb/common/semaphore"
-	"github.com/conseweb/poe/api"
 	"github.com/jmcvetta/randutil"
 	"github.com/parnurzeal/gorequest"
 	"gopkg.in/alecthomas/kingpin.v2"
+	"github.com/conseweb/poe/api"
 )
 
 // Test flow:
@@ -44,6 +44,7 @@ var (
 	host        = kingpin.Arg("host", "host of poe").Default("http://localhost:9694").String()
 	concurrency = kingpin.Flag("concurrency", "request concurrency").Short('c').Default("100").Int()
 	tn          = kingpin.Arg("tn", "number of tests").Default("1000").Int()
+	wp          = kingpin.Arg("wp", "wait period, using duration string, default '1m'").Default("1m").String()
 )
 
 func main() {
@@ -51,6 +52,11 @@ func main() {
 
 	concurrencyCtrl = semaphore.NewSemaphore(*concurrency)
 	docmaps = make(map[string]string)
+	wpDuration, err := time.ParseDuration(*wp)
+	if err != nil {
+		panic(err)
+	}
+
 	for i := 0; i < *tn; i++ {
 		concurrencyCtrl.Acquire()
 		go func() {
@@ -61,8 +67,8 @@ func main() {
 				panic(err)
 			}
 
-			docId := docRegister(docData)
-			time.AfterFunc(time.Minute*2, func() {
+			docId := docRegister(*wp, docData)
+			time.AfterFunc(wpDuration, func() {
 				status := docProofStatus(docId)
 				if status.Status == "wait" {
 					panic(fmt.Errorf("document[%s] hasn't been proofed", docId))
@@ -84,10 +90,10 @@ var (
 	concurrencyCtrl *semaphore.Semaphore
 )
 
-func docRegister(data string) string {
+func docRegister(wp, data string) string {
 	submitResp := new(api.DocumentSubmitResponse)
 	_, _, errs := gorequest.New().Post(fmt.Sprintf("%s%s", *host, api_doc_reg)).Send(map[string]string{
-		"proofWaitPeriod": "1m",
+		"proofWaitPeriod": wp,
 		"rawDocument":     data,
 	}).EndStruct(submitResp)
 	if len(errs) != 0 {
