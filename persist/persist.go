@@ -55,6 +55,12 @@ type PersistInterface interface {
 	// FindDocsByHash
 	FindDocsByHash(hash string) ([]*protos.Document, error)
 
+	// FindRegisteredDocs
+	FindRegisteredDocs(count int) ([]*protos.Document, error)
+
+	// FindProofedDocs
+	FindProofedDocs(count int) ([]*protos.Document, error)
+
 	// Close closes persister
 	Close() error
 }

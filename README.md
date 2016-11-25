@@ -75,6 +75,27 @@ Proof of Exists
 * proofTime: 文件被证明时间(UTC 时间戳)
 * perdictProofTime: 当状态为等待被证明时,预计被证明的时间(UTC 时间戳)
 
+### GET /api/v1/documents
+获取最近n条文件
+
+#### 路径参数
+无
+
+#### 查询参数
+* count: 需要查询的个数
+* type: 查询的类型, register(已注册未证明)、proof(已证明)
+
+#### Form表单
+无
+
+#### 返回状态值
+200 400 500
+
+#### 返回值(json)
+* docs: 查询的文件列表
+
+
+
 ## 模块架构
 
 ### api
