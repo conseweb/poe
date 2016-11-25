@@ -173,6 +173,14 @@ func (l *LevelDBPersister) FindDocsByHash(hash string) ([]*protos.Document, erro
 	return l.getDocsByDocIds(docIds)
 }
 
+func (l *LevelDBPersister) FindRegisteredDocs(count int) ([]*protos.Document, error) {
+	return nil, fmt.Errorf("unsupported operation")
+}
+
+func (l *LevelDBPersister) FindProofedDocs(count int) ([]*protos.Document, error) {
+	return nil, fmt.Errorf("unsupported operation")
+}
+
 func (l *LevelDBPersister) Close() error {
 	return l.db.Close()
 }

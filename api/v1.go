@@ -19,7 +19,9 @@ package api
 import (
 	"time"
 
+	"github.com/conseweb/poe/protos"
 	"github.com/kataras/iris"
+	"sort"
 )
 
 // DocumentSubmitRequest
@@ -169,3 +171,49 @@ func (srv *APIServer) getProof(ctx *iris.Context) {
 
 	ctx.JSON(iris.StatusOK, response)
 }
+
+type GetDocsResponse struct {
+	Docs []*protos.Document `json:"docs"`
+}
+
+// getRegisteredDocs returns registered in the platform but still not ben proofed documents
+func (srv *APIServer) getDocs(ctx *iris.Context) {
+	searchType := ctx.URLParam("type")
+	count, err := ctx.URLParamInt("count")
+	if err != nil || count <= 0 {
+		count = 10
+	}
+
+	var docs []*protos.Document
+	switch searchType {
+	case "register":
+		docs, err = srv.persister.FindRegisteredDocs(count)
+		sort.Sort(RegisteredDocs(docs))
+	case "proof":
+		docs, err = srv.persister.FindProofedDocs(count)
+		sort.Sort(ProofedDocs(docs))
+	default:
+		ctx.EmitError(iris.StatusBadRequest)
+		return
+	}
+	if err != nil {
+		ctx.JSON(iris.StatusInternalServerError, err)
+		return
+	}
+
+	ctx.JSON(iris.StatusOK, &GetDocsResponse{
+		Docs: docs,
+	})
+}
+
+type RegisteredDocs []*protos.Document
+
+func (docs RegisteredDocs) Len() int           { return len(docs) }
+func (docs RegisteredDocs) Less(i, j int) bool { return docs[i].SubmitTime < docs[j].SubmitTime }
+func (docs RegisteredDocs) Swap(i, j int)      { docs[i], docs[j] = docs[j], docs[i] }
+
+type ProofedDocs []*protos.Document
+
+func (docs ProofedDocs) Len() int           { return len(docs) }
+func (docs ProofedDocs) Less(i, j int) bool { return docs[i].ProofTime < docs[j].ProofTime }
+func (docs ProofedDocs) Swap(i, j int)      { docs[i], docs[j] = docs[j], docs[i] }

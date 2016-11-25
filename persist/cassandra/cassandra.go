@@ -110,19 +110,8 @@ func (c *CassandraPersister) FindDocsByBlockDigest(digest string) ([]*protos.Doc
 	}
 
 	iter := c.session.Query("SELECT id, hash, blockDigest, submitTime, proofTime, waitDuration FROM documents WHERE blockDigest = ?", digest).Iter()
-	docs := make([]*protos.Document, 0)
-	for {
-		doc := &protos.Document{}
-		if !iter.Scan(&doc.Id, &doc.Hash, &doc.BlockDigest, &doc.SubmitTime, &doc.ProofTime, &doc.WaitDuration) {
-			break
-		}
-		docs = append(docs, doc)
-	}
-	if err := iter.Close(); err != nil {
-		return nil, err
-	}
 
-	return docs, nil
+	return iterToDocs(iter)
 }
 
 func (c *CassandraPersister) FindDocsByHash(hash string) ([]*protos.Document, error) {
@@ -131,6 +120,36 @@ func (c *CassandraPersister) FindDocsByHash(hash string) ([]*protos.Document, er
 	}
 
 	iter := c.session.Query("SELECT id, hash, blockDigest, submitTime, proofTime, waitDuration FROM documents WHERE hash = ?", hash).Iter()
+
+	return iterToDocs(iter)
+}
+
+func (c *CassandraPersister) FindRegisteredDocs(count int) ([]*protos.Document, error) {
+	if count <= 0 {
+		return nil, fmt.Errorf("invalid param: count %d", count)
+	}
+
+	iter := c.session.Query("SELECT id, hash, blockDigest, submitTime, proofTime, waitDuration FROM documents WHERE blockDigest = ? and proofTime = ? LIMIT ?", "", "", count).Iter()
+
+	return iterToDocs(iter)
+}
+
+func (c *CassandraPersister) FindProofedDocs(count int) ([]*protos.Document, error) {
+	if count <= 0 {
+		return nil, fmt.Errorf("invalid param: count: %d", count)
+	}
+
+	iter := c.session.Query("SELECT id, hash, blockDigest, submitTime, proofTime, waitDuration FROM documents WHERE blockDigest != ? and proofTime != ? LIMIT ?", "", "", count).Iter()
+
+	return iterToDocs(iter)
+}
+
+func (c *CassandraPersister) Close() error {
+	c.session.Close()
+	return nil
+}
+
+func iterToDocs(iter *gocql.Iter) ([]*protos.Document, error) {
 	docs := make([]*protos.Document, 0)
 	for {
 		doc := &protos.Document{}
@@ -144,9 +163,4 @@ func (c *CassandraPersister) FindDocsByHash(hash string) ([]*protos.Document, er
 	}
 
 	return docs, nil
-}
-
-func (c *CassandraPersister) Close() error {
-	c.session.Close()
-	return nil
 }
