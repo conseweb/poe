@@ -104,11 +104,11 @@ blockchain:
 
   # peers, split up by space
   #peers: localhost:8081 localhost:8392
-  peer_address: 0.0.0.0:7051
-  event_address: 0.0.0.0:7053 
+  peer_address: "172.17.0.3:7051,172.17.0.4:7051,172.17.0.6:7051,172.17.0.5:7051"
+  event_address: "172.17.0.3:7053,172.17.0.4:7053,172.17.0.6:7053,172.17.0.5:7053"
   reg_timeout: 3s
   wrapper: {
-    "name":"poe_cc_demo_001",
+    "name":"43c937d1b0236f0897b5670c9f0e7a11898b904a1f9665536807f41aa9d7059eed8179a42e2d07bbfb6e551d1f8fa29974877d38219993600c4c847f3c0eecb4",
     "path":"github.com/conseweb/common/assets/poe",
     "language":"GOLANG",
     "secureContext":"jim"

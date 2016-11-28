@@ -65,6 +65,7 @@ func NewBlockchain(cc cache.CacheInterface, persister persist.PersistInterface) 
 	}
 	bc.cacher = cc
 	bc.persister = persister
+	go bc.EventStart()
 	go bc.continueProof()
 
 	//return bc
@@ -102,7 +103,10 @@ func (bc *Blockchain) VerifyDocs(docs []*protos.Document) bool {
 		blockchainLogger.Error(e)
 		return false
 	}
-	return result[0].Exist
+	if len(result) > 0 {
+		return result[0].Exist
+	}
+	return false
 	// TODO connect to chaincode peers to verify
 	//blockchainLogger.Debug("verify documents return true")
 	//return true

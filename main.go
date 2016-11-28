@@ -47,7 +47,6 @@ func main() {
 
 	// blockchain
 	bc := blockchain.NewBlockchain(cc, persister)
-	go bc.EventStart()
 	// api server
 	apisrv := api.NewAPIServer(cc, persister, bc)
 	go apisrv.Start()
