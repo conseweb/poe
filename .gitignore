@@ -27,3 +27,4 @@ poe
 docker
 testdata
 integration-tests/integration-tests
+nohup.out
