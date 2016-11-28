@@ -1,0 +1,10 @@
+FROM alpine:edge
+
+MAINTAINER Chuanjian Wang <me@ckeyer.com>
+
+COPY bundles/poe /usr/local/bin
+COPY poe.yaml /usr/local/bin
+
+WORKDIR /usr/local/bin
+
+CMD ["/usr/local/bin/poe"]

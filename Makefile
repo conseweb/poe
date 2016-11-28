@@ -26,12 +26,18 @@ integration-test:
 testInner: 
 	go test $$(go list ./... |grep -v "vendor"|grep -v "integration-tests")
 
+image: build build-image
+
 build: 
 	docker run --rm \
 	 --name $(APP)-building \
 	 -v $(PWD):$(INNER_GOPATH)/src/$(PKG) \
 	 -w $(INNER_GOPATH)/src/$(PKG) \
+	 -e CGO_ENABLED=0 \
 	 $(DEV_IMAGE) make local
+
+build-image:
+	docker build -t $(IMAGE) -f Dockerfile.run .
 
 local:
 	go build -o bundles/$(APP) .
@@ -42,4 +48,3 @@ dev:
 	 -v $(PWD):$(INNER_GOPATH)/src/$(PKG) \
 	 -w $(INNER_GOPATH)/src/$(PKG) \
 	 -it $(DEV_IMAGE) bash
-	 
