@@ -1,6 +1,20 @@
 # poe
 Proof of Exists
 
+## 开发测试流程
+* 添加了`vendor`目录，以后的修改需要在本地执行`make test` 通过后提交pr，有需要引用其它第三方包的需要通过`govendor` 命令进行添加或者版本的更新。
+* 添加了`make image`命令，构建运行时的镜像.
+使用：
+```
+docker run --rm --name poe \
+ -e POE_CACHE_KAFKA_BROKERS="192.168.5.101:9092 192.168.5.102:9092 192.168.5.103:9092" \
+ -e POE_PERSIST_CASSANDRA_CLUSTERS="u2.mj u3.mj u4.mj"  \
+conseweb/poe:(本地git branch)
+```
+* 使用`make test`进行单元测试
+
+**注:本地测试通过后再提交pr**
+
 ## API 接口
 平台暂定三个接口,如下:
 

@@ -19,14 +19,14 @@ logging:
 ##########################################################
 api:
   # http listen address
-  addr: localhost:9694
+  addr: :9694
 
   # proof wait period, the value is how many documents can be proofed
   period:
     1m: 1000
-    10m: 10000
-    30m: 30000
-    1h: 60000
+#    10m: 10000
+#    30m: 30000
+#    1h: 60000
 
 ##########################################################
 #
@@ -63,7 +63,7 @@ cache:
 ##########################################################
 persist:
   # which type of persist will be used, fake/cassandra/leveldb
-  type: leveldb
+  type: cassandra
 
   # internal chan cap
   chancap: 10000
