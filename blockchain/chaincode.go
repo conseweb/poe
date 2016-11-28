@@ -3,12 +3,13 @@ package blockchain
 import (
 	"strings"
 	"sync"
-	//"github.com/conseweb/common/crypto"
+
+	"github.com/conseweb/common/crypto"
 	poepb "github.com/conseweb/poe/protos"
 	"github.com/hyperledger/fabric/events/consumer"
 	fabricpb "github.com/hyperledger/fabric/protos"
 	"github.com/spf13/viper"
-	//"golang.org/x/crypto/sha3"
+	"golang.org/x/crypto/sha3"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 )
@@ -17,7 +18,7 @@ var (
 	// grpc client connection
 	grpcConn *grpc.ClientConn
 	// event client
-	eventCli *consumer.EventsClient
+	eventClis []*consumer.EventsClient
 )
 
 type (
@@ -150,16 +151,19 @@ func (this *eventAdapter) Disconnected(e error) {
 // 启动事件监听
 func (this *Blockchain) EventStart() error {
 	var (
-		adapter = eventAdapter{sender: this, ecc: make(chan *fabricpb.Event_ChaincodeEvent)}
-		e       error
+		adapter               = eventAdapter{sender: this, ecc: make(chan *fabricpb.Event_ChaincodeEvent)}
+		addressArray []string = strings.Split(viper.GetString("blockchain.event_address"), ",")
+		eventCli     *consumer.EventsClient
+		e            error
 	)
-	if eventCli, e = consumer.NewEventsClient(viper.GetString("blockchain.event_address"), viper.GetDuration("blockchain.reg_timeout"), &adapter); e != nil {
-		blockchainLogger.Error(e)
-		return e
-	}
-	if e = eventCli.Start(); e != nil {
-		blockchainLogger.Error(e)
-		return e
+	for _, addr := range addressArray {
+		if eventCli, e = consumer.NewEventsClient(addr, viper.GetDuration("blockchain.reg_timeout"), &adapter); e != nil {
+			return e
+		}
+		if e = eventCli.Start(); e != nil {
+			return e
+		}
+		eventClis = append(eventClis, eventCli)
 	}
 	for {
 		select {
@@ -175,8 +179,10 @@ func (this *Blockchain) Close() error {
 	if grpcConn != nil {
 		grpcConn.Close()
 	}
-	if eventCli != nil {
-		eventCli.Stop()
+	if eventClis != nil {
+		for _, eventCli := range eventClis {
+			eventCli.Stop()
+		}
 	}
 	this.items.Clear()
 	return nil
@@ -184,19 +190,21 @@ func (this *Blockchain) Close() error {
 
 // invoke_completed 事件响应处理
 func invokeCompleted(sender *Blockchain, e *fabricpb.Event_ChaincodeEvent) error {
-	blockchainLogger.Infof("<invokeCompleted> event: %v", e)
-	blockchainLogger.Infof("<invokeCompleted> items: %v", sender.items.data)
 	obj := sender.items.Get(e.ChaincodeEvent.TxID)
 	if obj != nil {
 		if docs, ok := obj.([]*poepb.Document); ok {
-			proofKey := strings.Split(string(e.ChaincodeEvent.Payload), ",")[0]
-			docIds := make([]string, len(docs))
-			for idx, doc := range docs {
-				docIds[idx] = doc.Id
+			data := strings.Split(string(e.ChaincodeEvent.Payload), ",")
+			if len(data) > 0 {
+				proofKey := data[0]
+				docIds := make([]string, len(docs))
+				for idx, doc := range docs {
+					docIds[idx] = doc.Id
+				}
+				blockchainLogger.Infof("<invokeCompleted> proofKey: %s", proofKey)
+				blockchainLogger.Infof("<invokeCompleted> docs: %v", docIds)
+				go sender.persister.SetDocsBlockDigest(docIds, crypto.Hash(sha3.New512(), []byte(proofKey)))
 			}
-			blockchainLogger.Infof("<invokeCompleted> proofKey: %s", proofKey)
-			blockchainLogger.Infof("<invokeCompleted> docs: %v", docIds)
-			//go sender.persister.SetDocsBlockDigest(docIds, crypto.Hash(sha3.New512(), []byte(proofKey)))
+
 		}
 		sender.items.Delete(e.ChaincodeEvent.TxID)
 	}
@@ -211,14 +219,15 @@ func getGrpcConn() *grpc.ClientConn {
 			grpc.WithTimeout(viper.GetDuration("blockchain.reg_timeout")),
 			grpc.WithInsecure(),
 		}
-		e error
+		addressArray []string = strings.Split(viper.GetString("blockchain.peer_address"), ",")
 	)
 	if grpcConn == nil {
-		grpcConn, e = grpc.Dial(viper.GetString("blockchain.peer_address"), opts...)
-		if e != nil {
-			blockchainLogger.Error(e)
-			return nil
+		for _, addr := range addressArray {
+			grpcConn, _ = grpc.Dial(addr, opts...)
+			if grpcConn != nil {
+				return grpcConn
+			}
 		}
 	}
-	return grpcConn
+	return nil
 }
