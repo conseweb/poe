@@ -59,6 +59,7 @@ func NewKafkaCache() *KafkaCache {
 	config := sarama.NewConfig()
 	config.Producer.RequiredAcks = sarama.WaitForAll
 	config.Producer.Retry.Max = viper.GetInt("cache.kafka.retry")
+	config.Producer.Return.Successes = true
 	config.Consumer.Offsets.Initial = sarama.OffsetNewest
 	tlsConfig := createTlsConfiguration()
 	if tlsConfig != nil {
