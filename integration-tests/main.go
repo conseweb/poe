@@ -19,12 +19,13 @@ package main
 import (
 	"fmt"
 	"time"
+	"sync"
 
 	"github.com/conseweb/common/semaphore"
+	"github.com/conseweb/poe/api"
 	"github.com/jmcvetta/randutil"
 	"github.com/parnurzeal/gorequest"
 	"gopkg.in/alecthomas/kingpin.v2"
-	"github.com/conseweb/poe/api"
 )
 
 // Test flow:
@@ -50,13 +51,14 @@ var (
 func main() {
 	kingpin.Parse()
 
+	wg := &sync.WaitGroup{}
 	concurrencyCtrl = semaphore.NewSemaphore(*concurrency)
-	docmaps = make(map[string]string)
 	wpDuration, err := time.ParseDuration(*wp)
 	if err != nil {
 		panic(err)
 	}
 
+	wg.Add(*tn)
 	for i := 0; i < *tn; i++ {
 		concurrencyCtrl.Acquire()
 		go func() {
@@ -78,29 +80,30 @@ func main() {
 				if proofResult.Status == "wait" {
 					panic(fmt.Errorf("document[%s] proof too slow", docId))
 				}
+
+				wg.Done()
 			})
 		}()
 	}
+	wg.Wait()
 }
 
 var (
-	// document id map
-	docmaps map[string]string
 	// concurrency control
 	concurrencyCtrl *semaphore.Semaphore
 )
 
 func docRegister(wp, data string) string {
 	submitResp := new(api.DocumentSubmitResponse)
-	_, _, errs := gorequest.New().Post(fmt.Sprintf("%s%s", *host, api_doc_reg)).Send(map[string]string{
+	_, _, errs := gorequest.New().Post(fmt.Sprintf("%s%s", *host, api_doc_reg)).Type("form").Send(map[string]string{
 		"proofWaitPeriod": wp,
 		"rawDocument":     data,
 	}).EndStruct(submitResp)
 	if len(errs) != 0 {
-		panic(errs)
+		panic(errs[0])
 	}
 
-	docmaps[submitResp.DocumentID] = data
+	//docmaps[submitResp.DocumentID] = data
 	return submitResp.DocumentID
 }
 
@@ -108,7 +111,7 @@ func docProofStatus(docId string) *api.GetProofStatusResponse {
 	statusResp := new(api.GetProofStatusResponse)
 	_, _, errs := gorequest.New().Get(fmt.Sprintf("%s%s", *host, fmt.Sprintf(api_doc_proof_status, docId))).EndStruct(statusResp)
 	if len(errs) != 0 {
-		panic(errs)
+		panic(errs[0])
 	}
 
 	if statusResp.Status == "none" {
@@ -120,11 +123,11 @@ func docProofStatus(docId string) *api.GetProofStatusResponse {
 
 func docProofResult(data string) *api.GetProofResponse {
 	proofResp := new(api.GetProofResponse)
-	_, _, errs := gorequest.New().Post(fmt.Sprintf("%s%s", *host, api_doc_proof_result)).Send(map[string]string{
+	_, _, errs := gorequest.New().Post(fmt.Sprintf("%s%s", *host, api_doc_proof_result)).Type("form").Send(map[string]string{
 		"rawDocument": data,
 	}).EndStruct(proofResp)
 	if len(errs) != 0 {
-		panic(errs)
+		panic(errs[0])
 	}
 
 	if proofResp.Status == "none" || proofResp.Status == "invalid" {

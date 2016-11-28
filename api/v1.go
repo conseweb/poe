@@ -18,10 +18,10 @@ package api
 
 import (
 	"time"
+	"sort"
 
 	"github.com/conseweb/poe/protos"
 	"github.com/kataras/iris"
-	"sort"
 )
 
 // DocumentSubmitRequest
