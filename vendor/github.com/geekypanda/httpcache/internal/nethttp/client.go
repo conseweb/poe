@@ -3,7 +3,6 @@ package nethttp
 import (
 	"bytes"
 	"github.com/geekypanda/httpcache/internal"
-	"github.com/geekypanda/httpcache/internal/nethttp/rule"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -19,11 +18,6 @@ import (
 type ClientHandler struct {
 	// bodyHandler the original route's handler
 	bodyHandler http.Handler
-
-	// Rule optional validators for pre cache and post cache actions
-	//
-	// See more at ruleset.go
-	rule rule.Rule
 
 	life time.Duration
 
@@ -42,36 +36,9 @@ type ClientHandler struct {
 func NewClientHandler(bodyHandler http.Handler, life time.Duration, remote string) *ClientHandler {
 	return &ClientHandler{
 		bodyHandler:      bodyHandler,
-		rule:             DefaultRuleSet,
 		life:             life,
 		remoteHandlerURL: remote,
 	}
-}
-
-// Rule sets the ruleset for this handler,
-// see internal/net/http/ruleset.go for more information.
-//
-// returns itself.
-func (h *ClientHandler) Rule(r rule.Rule) *ClientHandler {
-	if r == nil {
-		// if nothing passed then use the allow-everyting rule
-		r = rule.Satisfied()
-	}
-	h.rule = r
-
-	return h
-}
-
-// AddRule adds a rule in the chain, the default rules are executed first.
-//
-// returns itself.
-func (h *ClientHandler) AddRule(r rule.Rule) *ClientHandler {
-	if r == nil {
-		return h
-	}
-
-	h.rule = rule.Chained(h.rule, r)
-	return h
 }
 
 // Client is used inside the global Request function
@@ -99,14 +66,6 @@ const (
 //
 // client-side function
 func (h *ClientHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-
-	// check for deniers, if at least one of them return true
-	// for this specific request, then skip the whole cache
-	if !h.rule.Claim(r) {
-		h.bodyHandler.ServeHTTP(w, r)
-		return
-	}
-
 	uri := &internal.URIBuilder{}
 	uri.ServerAddr(h.remoteHandlerURL).ClientURI(r.URL.RequestURI()).ClientMethod(r.Method)
 
@@ -125,14 +84,7 @@ func (h *ClientHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err != nil || response.StatusCode == internal.FailStatus {
 		// if not found on cache, then execute the handler and save the cache to the remote server
 		recorder := AcquireResponseRecorder(w)
-		defer ReleaseResponseRecorder(recorder)
-
 		h.bodyHandler.ServeHTTP(recorder, r)
-
-		// check if it's a valid response, if it's not then just return.
-		if !h.rule.Valid(recorder, r) {
-			return
-		}
 		// save to the remote cache
 		// we re-create the request for any case
 
@@ -146,7 +98,7 @@ func (h *ClientHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		uri.ContentType(recorder.ContentType())
 
 		request, err = http.NewRequest(methodPost, uri.String(), bytes.NewBuffer(body)) // yes new buffer every time
-
+		ReleaseResponseRecorder(recorder)
 		// println("POST Do to the remote cache service with the url: " + request.URL.String())
 		if err != nil {
 			//// println("Request: error on method Post of request to the remote: " + err.Error())

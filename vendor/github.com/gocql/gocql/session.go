@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -230,7 +231,7 @@ func (s *Session) reconnectDownedHosts(intv time.Duration) {
 				for _, h := range hosts {
 					buf.WriteString("[" + h.Peer().String() + ":" + h.State().String() + "]")
 				}
-				Logger.Println(buf.String())
+				log.Println(buf.String())
 			}
 
 			for _, h := range hosts {
@@ -1232,16 +1233,6 @@ func (iter *Iter) Scan(dest ...interface{}) bool {
 // See https://datastax.github.io/java-driver/manual/custom_payloads/
 func (iter *Iter) GetCustomPayload() map[string][]byte {
 	return iter.framer.header.customPayload
-}
-
-// Warnings returns any warnings generated if given in the response from Cassandra.
-//
-// This is only available starting with CQL Protocol v4.
-func (iter *Iter) Warnings() []string {
-	if iter.framer != nil {
-		return iter.framer.header.warnings
-	}
-	return nil
 }
 
 // Close closes the iterator and returns any errors that happened during

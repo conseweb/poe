@@ -5,10 +5,7 @@
 
 package github
 
-import (
-	"fmt"
-	"strings"
-)
+import "fmt"
 
 // RepositoriesService handles communication with the repository related
 // methods of the GitHub API.
@@ -49,22 +46,16 @@ type Repository struct {
 	Source           *Repository      `json:"source,omitempty"`
 	Organization     *Organization    `json:"organization,omitempty"`
 	Permissions      *map[string]bool `json:"permissions,omitempty"`
-	AllowRebaseMerge *bool            `json:"allow_rebase_merge,omitempty"`
-	AllowSquashMerge *bool            `json:"allow_squash_merge,omitempty"`
-	AllowMergeCommit *bool            `json:"allow_merge_commit,omitempty"`
 
 	// Only provided when using RepositoriesService.Get while in preview
 	License *License `json:"license,omitempty"`
 
 	// Additional mutable fields when creating and editing a repository
-	Private           *bool   `json:"private"`
-	HasIssues         *bool   `json:"has_issues"`
-	HasWiki           *bool   `json:"has_wiki"`
-	HasPages          *bool   `json:"has_pages"`
-	HasDownloads      *bool   `json:"has_downloads"`
-	LicenseTemplate   *string `json:"license_template,omitempty"`
-	GitignoreTemplate *string `json:"gitignore_template,omitempty"`
-
+	Private      *bool `json:"private"`
+	HasIssues    *bool `json:"has_issues"`
+	HasWiki      *bool `json:"has_wiki"`
+	HasPages     *bool `json:"has_pages"`
+	HasDownloads *bool `json:"has_downloads"`
 	// Creating an organization repository. Required for non-owners.
 	TeamID *int `json:"team_id"`
 
@@ -292,8 +283,7 @@ func (s *RepositoriesService) Get(owner, repo string) (*Repository, *Response, e
 
 	// TODO: remove custom Accept header when the license support fully launches
 	// https://developer.github.com/v3/licenses/#get-a-repositorys-license
-	acceptHeaders := []string{mediaTypeLicensesPreview, mediaTypeSquashPreview}
-	req.Header.Set("Accept", strings.Join(acceptHeaders, ", "))
+	req.Header.Set("Accept", mediaTypeLicensesPreview)
 
 	repository := new(Repository)
 	resp, err := s.client.Do(req, repository)
@@ -336,9 +326,6 @@ func (s *RepositoriesService) Edit(owner, repo string, repository *Repository) (
 	if err != nil {
 		return nil, nil, err
 	}
-
-	// TODO: Remove this preview header after API is fully vetted.
-	req.Header.Add("Accept", mediaTypeSquashPreview)
 
 	r := new(Repository)
 	resp, err := s.client.Do(req, r)
@@ -595,18 +582,18 @@ func (s *RepositoriesService) EditBranch(owner, repo, branchName string, branch 
 // License gets the contents of a repository's license if one is detected.
 //
 // GitHub API docs: https://developer.github.com/v3/licenses/#get-the-contents-of-a-repositorys-license
-func (s *RepositoriesService) License(owner, repo string) (*RepositoryLicense, *Response, error) {
+func (s *RepositoriesService) License(owner, repo string) (*License, *Response, error) {
 	u := fmt.Sprintf("repos/%v/%v/license", owner, repo)
 	req, err := s.client.NewRequest("GET", u, nil)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	r := &RepositoryLicense{}
+	r := &Repository{}
 	resp, err := s.client.Do(req, r)
 	if err != nil {
 		return nil, resp, err
 	}
 
-	return r, resp, err
+	return r.License, resp, err
 }

@@ -6,6 +6,7 @@ package gocql
 
 import (
 	"errors"
+	"log"
 	"net"
 	"time"
 )
@@ -161,7 +162,7 @@ func (cfg *ClusterConfig) translateAddressPort(addr net.IP, port int) (net.IP, i
 	}
 	newAddr, newPort := cfg.AddressTranslator.Translate(addr, port)
 	if gocqlDebug {
-		Logger.Printf("gocql: translating address '%v:%d' to '%v:%d'", addr, port, newAddr, newPort)
+		log.Printf("gocql: translating address '%v:%d' to '%v:%d'", addr, port, newAddr, newPort)
 	}
 	return newAddr, newPort
 }

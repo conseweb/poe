@@ -1,10 +1,10 @@
 package fhttp
 
 import (
-	"github.com/geekypanda/httpcache/internal"
-	"github.com/geekypanda/httpcache/internal/fhttp/rule"
-	"github.com/valyala/fasthttp"
 	"time"
+
+	"github.com/geekypanda/httpcache/internal"
+	"github.com/valyala/fasthttp"
 )
 
 // ClientHandler is the client-side handler
@@ -15,14 +15,8 @@ import (
 //  which lives on other, external machine.
 //
 type ClientHandler struct {
-
 	// bodyHandler the original route's handler
 	bodyHandler fasthttp.RequestHandler
-
-	// Rule optional validators for pre cache and post cache actions
-	//
-	// See more at ruleset.go
-	rule rule.Rule
 
 	life time.Duration
 
@@ -41,36 +35,9 @@ type ClientHandler struct {
 func NewClientHandler(bodyHandler fasthttp.RequestHandler, life time.Duration, remote string) *ClientHandler {
 	return &ClientHandler{
 		bodyHandler:      bodyHandler,
-		rule:             DefaultRuleSet,
 		life:             life,
 		remoteHandlerURL: remote,
 	}
-}
-
-// Rule sets the ruleset for this handler,
-// see internal/net/http/ruleset.go for more information.
-//
-// returns itself.
-func (h *ClientHandler) Rule(r rule.Rule) *ClientHandler {
-	if r == nil {
-		// if nothing passed then use the allow-everyting rule
-		r = rule.Satisfied()
-	}
-	h.rule = r
-
-	return h
-}
-
-// AddRule adds a rule in the chain, the default rules are executed first.
-//
-// returns itself.
-func (h *ClientHandler) AddRule(r rule.Rule) *ClientHandler {
-	if r == nil {
-		return h
-	}
-
-	h.rule = rule.Chained(h.rule, r)
-	return h
 }
 
 // ClientFasthttp is used inside the global RequestFasthttp function
@@ -99,24 +66,15 @@ var (
 //
 // client-side function
 func (h *ClientHandler) ServeHTTP(reqCtx *fasthttp.RequestCtx) {
-
-	// check for pre-cache validators, if at least one of them return false
-	// for this specific request, then skip the whole cache
-	if !h.rule.Claim(reqCtx) {
-		h.bodyHandler(reqCtx)
-		return
-	}
-
 	uri := &internal.URIBuilder{}
 	uri.ServerAddr(h.remoteHandlerURL).ClientURI(string(reqCtx.URI().RequestURI())).ClientMethod(string(reqCtx.Method()))
 
 	req := fasthttp.AcquireRequest()
-	defer fasthttp.ReleaseRequest(req)
+
 	req.URI().Update(uri.String())
 	req.Header.SetMethodBytes(methodGetBytes)
 
 	res := fasthttp.AcquireResponse()
-	defer fasthttp.ReleaseResponse(res)
 	// println("[FASTHTTP] GET Do to the remote cache service with the url: " + req.URI().String())
 
 	err := ClientFasthttp.Do(req, res)
@@ -127,16 +85,12 @@ func (h *ClientHandler) ServeHTTP(reqCtx *fasthttp.RequestCtx) {
 		//		times++
 		// if not found on cache, then execute the handler and save the cache to the remote server
 		h.bodyHandler(reqCtx)
-
-		// check if it's a valid response, if it's not then just return.
-		if !h.rule.Valid(reqCtx) {
-			return
-		}
-
 		// save to the remote cache
 
 		body := reqCtx.Response.Body()[0:]
 		if len(body) == 0 {
+			fasthttp.ReleaseRequest(req)
+			fasthttp.ReleaseResponse(res)
 			return // do nothing..
 		}
 		req.Reset()
@@ -156,6 +110,8 @@ func (h *ClientHandler) ServeHTTP(reqCtx *fasthttp.RequestCtx) {
 		//	println("[FASTHTTP] ERROR WHEN POSTING TO SAVE THE CACHE ENTRY. TRACE: " + err.Error())
 		//	}
 		ClientFasthttp.Do(req, res)
+		fasthttp.ReleaseRequest(req)
+		fasthttp.ReleaseResponse(res)
 		//	}()
 
 	} else {
@@ -167,6 +123,9 @@ func (h *ClientHandler) ServeHTTP(reqCtx *fasthttp.RequestCtx) {
 		reqCtx.Response.Header.SetContentTypeBytes(cType)
 
 		reqCtx.Write(res.Body())
+
+		fasthttp.ReleaseRequest(req)
+		fasthttp.ReleaseResponse(res)
 	}
 
 }

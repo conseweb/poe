@@ -17,20 +17,18 @@ limitations under the License.
 package blockchain
 
 import (
+	"encoding/json"
 	"sort"
 	"strings"
 	"sync"
 	"time"
 
-	//"github.com/conseweb/common/crypto"
 	"github.com/conseweb/poe/cache"
 	"github.com/conseweb/poe/persist"
 	"github.com/conseweb/poe/protos"
 	"github.com/conseweb/poe/utils"
 	"github.com/op/go-logging"
-	//"github.com/spf13/viper"
-	//"golang.org/x/crypto/sha3"
-	"encoding/json"
+	"github.com/spf13/viper"
 )
 
 var (
@@ -39,36 +37,66 @@ var (
 
 // Blockchain
 type Blockchain struct {
-	//name        string
-	//chaincodeID string
-	//peers       []string
-	items     *items
-	wrapper   *chaincodeWrapper
-	cacher    cache.CacheInterface
-	persister persist.PersistInterface
+	name        string
+	path        string
+	secureCtx   string
+	balance     string
+	peers       []string
+	peerBackend backends
+	events      []string
+	regTimeout  time.Duration
+	failOver    int
+	items       *items
+	cacher      cache.CacheInterface
+	persister   persist.PersistInterface
 }
 
 // NewBlockchain returns a blockchain handler
 func NewBlockchain(cc cache.CacheInterface, persister persist.PersistInterface) *Blockchain {
-	//	bc := &Blockchain{
-	//		name:        "blockchain",
-	//		chaincodeID: viper.GetString("blockchain.chaincodeId"),
-	//		peers:       viper.GetStringSlice("blockchain.peers"),
-	//		cacher:      cc,
-	//		persister:   persister,
-	//	}
 	bc := Blockchain{}
-	bc.items = &items{lock: new(sync.RWMutex), data: make(map[string]interface{})}
-	bc.wrapper = newWrapper("blockchain.wrapper")
-	if bc.wrapper == nil {
+	bc.name = viper.GetString("blockchain.name")
+	if len(strings.TrimSpace(bc.name)) == 0 {
+		blockchainLogger.Errorf("in bc func <NewBlockchain> config item <blockchain.name> is not valid,Cannot be empty or contain null characters")
 		return nil
 	}
+	bc.path = viper.GetString("blockchain.path")
+	if len(strings.TrimSpace(bc.path)) == 0 {
+		blockchainLogger.Errorf("in bc func <NewBlockchain> config item <blockchain.path> is not valid,Cannot be empty or contain null characters")
+		return nil
+	}
+	bc.secureCtx = viper.GetString("blockchain.secureCtx")
+	if len(strings.TrimSpace(bc.secureCtx)) == 0 {
+		blockchainLogger.Errorf("in bc func <NewBlockchain> config item <blockchain.secureCtx> is not valid,Cannot be empty or contain null characters")
+		return nil
+	}
+	bc.peers = viper.GetStringSlice("blockchain.peers")
+	if len(bc.peers) == 0 {
+		blockchainLogger.Errorf("in bc func <NewBlockchain> config item <blockchain.peers> is not valid,Cannot be contain null")
+		return nil
+	}
+	bc.balance = viper.GetString("blockchain.balance")
+	if len(strings.TrimSpace(bc.balance)) == 0 {
+		bc.balance = "round-robin"
+	}
+	bc.peerBackend = build(bc.balance, bc.peers)
+	bc.events = viper.GetStringSlice("blockchain.events")
+	if len(bc.events) == 0 {
+		blockchainLogger.Errorf("in bc func <NewBlockchain> config item <blockchain.events> is not valid,Cannot be contain null")
+		return nil
+	}
+	bc.regTimeout = viper.GetDuration("blockchain.regTimeout")
+	if bc.regTimeout.String() == "0s" {
+		bc.regTimeout = 3
+	}
+	bc.failOver = viper.GetInt("blockchain.failover")
+	if bc.failOver == 0 {
+		bc.failOver = 3
+	}
+	bc.items = &items{lock: new(sync.RWMutex), data: make(map[string]interface{})}
 	bc.cacher = cc
 	bc.persister = persister
-	go bc.EventStart()
+	go bc.eventStart()
 	go bc.continueProof()
-
-	//return bc
 	return &bc
 
 }
@@ -93,7 +121,7 @@ func (bc *Blockchain) VerifyDocs(docs []*protos.Document) bool {
 	if formatedDocs == "" {
 		return false
 	}
-	data, e := bc.wrapper.Execute("query", "existence", []string{"base", formatedDocs})
+	data, e := bc.execute("query", "existence", []string{"base", formatedDocs})
 	if e != nil {
 		blockchainLogger.Error(e)
 		return false
@@ -118,7 +146,7 @@ func (bc *Blockchain) RegisterProof(docs []*protos.Document) {
 	if formatedDocs == "" {
 		return
 	}
-	data, e := bc.wrapper.Execute("invoke", "register", []string{"base", formatedDocs})
+	data, e := bc.execute("invoke", "register", []string{"base", formatedDocs})
 	if e != nil {
 		blockchainLogger.Error(e)
 	}
@@ -140,10 +168,9 @@ func (bc *Blockchain) continueProof() {
 	getDocsFromCache := func(period *utils.PeriodLimit) []*protos.Document {
 		topic := bc.cacher.Topic(period.Period)
 		blockchainLogger.Infof("blockchain get topic[%s] documents", topic)
-		//docs, err := bc.cacher.Get(bc.name, topic, period.Limit)
-		docs, err := bc.cacher.Get(bc.wrapper.Name, topic, period.Limit)
+		docs, err := bc.cacher.Get(bc.name, topic, period.Limit)
 		if err != nil {
-			//blockchainLogger.Warningf("get documents from cache return error: %v", err)
+			blockchainLogger.Warningf("get documents from cache return error: %v", err)
 			return nil
 		}
 
@@ -153,8 +180,7 @@ func (bc *Blockchain) continueProof() {
 	// cache customer subscribe cache topic
 	periodLimits := utils.GetPeriodLimits()
 	for _, period := range periodLimits {
-		//bc.cacher.Subscribe(bc.name, bc.cacher.Topic(period.Period))
-		bc.cacher.Subscribe(bc.wrapper.Name, bc.cacher.Topic(period.Period))
+		bc.cacher.Subscribe(bc.name, bc.cacher.Topic(period.Period))
 		go func(period *utils.PeriodLimit) {
 			ticker := time.NewTicker(period.Period)
 			for {
