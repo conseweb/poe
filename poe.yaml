@@ -99,7 +99,7 @@ persist:
 #
 #########################################################
 blockchain:
-  name: "43c937d1b0236f0897b5670c9f0e7a11898b904a1f9665536807f41aa9d7059eed8179a42e2d07bbfb6e551d1f8fa29974877d38219993600c4c847f3c0eecb4"
+  chainCodeId: "43c937d1b0236f0897b5670c9f0e7a11898b904a1f9665536807f41aa9d7059eed8179a42e2d07bbfb6e551d1f8fa29974877d38219993600c4c847f3c0eecb4"
   path: "github.com/conseweb/common/assets/poe"
   secureCtx: "jim"
   balance: "round-robin"

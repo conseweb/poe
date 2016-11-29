@@ -38,6 +38,7 @@ var (
 // Blockchain
 type Blockchain struct {
 	name        string
+	chainCodeId string
 	path        string
 	secureCtx   string
 	balance     string
@@ -54,9 +55,10 @@ type Blockchain struct {
 // NewBlockchain returns a blockchain handler
 func NewBlockchain(cc cache.CacheInterface, persister persist.PersistInterface) *Blockchain {
 	bc := Blockchain{}
-	bc.name = viper.GetString("blockchain.name")
-	if len(strings.TrimSpace(bc.name)) == 0 {
-		blockchainLogger.Errorf("in bc func <NewBlockchain> config item <blockchain.name> is not valid,Cannot be empty or contain null characters")
+	bc.name = "blockchain"
+	bc.chainCodeId = viper.GetString("blockchain.chainCodeId")
+	if len(strings.TrimSpace(bc.chainCodeId)) == 0 {
+		blockchainLogger.Errorf("in bc func <NewBlockchain> config item <blockchain.chainCodeId> is not valid,Cannot be empty or contain null characters")
 		return nil
 	}
 	bc.path = viper.GetString("blockchain.path")
