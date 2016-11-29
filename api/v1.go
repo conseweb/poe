@@ -17,12 +17,12 @@ limitations under the License.
 package api
 
 import (
-	"time"
 	"sort"
+	"time"
 
 	"github.com/conseweb/poe/protos"
-	"github.com/kataras/iris"
 	"github.com/conseweb/poe/utils"
+	"github.com/kataras/iris"
 )
 
 // DocumentSubmitRequest
