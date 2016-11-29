@@ -39,6 +39,9 @@ type PeriodLimit struct {
 func GetPeriodLimits() []*PeriodLimit {
 	once.Do(func() {
 		periodLimits = loadPeriodLimitsFromConfig()
+		if len(periodLimits) == 0 {
+			panic("periodLimits can't be 0")
+		}
 	})
 
 	mutex.RLock()
