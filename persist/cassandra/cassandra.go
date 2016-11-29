@@ -38,11 +38,13 @@ CREATE TABLE documents (
 	blockDigest text,
 	submitTime bigint,
 	proofTime bigint,
-	waitDuration int
+	waitDuration bigint,
+	transactionId text
 );
 
 CREATE INDEX ON poe.documents(hash);
 CREATE INDEX ON poe.documents(blockDigest);
+CREATE INDEX ON poe.documents(transactionId);
 */
 type CassandraPersister struct {
 	session *gocql.Session
