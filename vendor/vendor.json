@@ -270,6 +270,12 @@
 			"revisionTime": "2016-10-21T19:44:08Z"
 		},
 		{
+			"checksumSHA1": "56wyOoLznFBSCqliBRjiwKAs0R8=",
+			"path": "github.com/iris-contrib/middleware/cors",
+			"revision": "fd204bbe1fe40fb92800f5dfbb5d637776a30b46",
+			"revisionTime": "2016-10-31T04:52:57Z"
+		},
+		{
 			"checksumSHA1": "RgCoekFv6JqCplQVRLj1hxWdnqo=",
 			"path": "github.com/iris-contrib/middleware/logger",
 			"revision": "fd204bbe1fe40fb92800f5dfbb5d637776a30b46",
