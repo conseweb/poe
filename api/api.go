@@ -21,6 +21,7 @@ import (
 	"github.com/conseweb/poe/cache"
 	"github.com/conseweb/poe/persist"
 	"github.com/hyperledger/fabric/flogging"
+	"github.com/iris-contrib/middleware/cors"
 	"github.com/iris-contrib/middleware/logger"
 	"github.com/kataras/iris"
 	"github.com/op/go-logging"
@@ -47,6 +48,10 @@ func NewAPIServer(cc cache.CacheInterface, persister persist.PersistInterface, b
 	// web framework
 	irisapi := iris.New()
 	irisapi.Use(logger.New())
+
+	// cors
+	irisapi.Use(cors.Default())
+
 	// api v1
 	{
 		irisapi.Post("/api/v1/documents", server.submitRaw)
