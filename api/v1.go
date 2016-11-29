@@ -22,6 +22,7 @@ import (
 
 	"github.com/conseweb/poe/protos"
 	"github.com/kataras/iris"
+	"github.com/conseweb/poe/utils"
 )
 
 // DocumentSubmitRequest
@@ -39,22 +40,25 @@ type DocumentSubmitResponse struct {
 // submitRaw submits raw file into cache
 func (srv *APIServer) submitRaw(ctx *iris.Context) {
 	req := new(DocumentSubmitRequest)
-	if err := ctx.ReadForm(req); err != nil {
+	if err := ctx.ReadJSON(req); err != nil {
 		apiLogger.Errorf("read submit document return error: %v", err)
-		ctx.EmitError(iris.StatusBadRequest)
+		ctx.Error(err.Error(), iris.StatusBadRequest)
 		return
 	}
 
+	if req.ProofWaitPeriod == "" {
+		req.ProofWaitPeriod = utils.GetPeriodLimits()[0].Period.String()
+	}
 	waitPeriod, err := time.ParseDuration(req.ProofWaitPeriod)
 	if err != nil {
 		apiLogger.Errorf("parse submit proof wait period return error: %v", err)
-		ctx.EmitError(iris.StatusBadRequest)
+		ctx.Error("proofWaitPeriod format is invalid", iris.StatusBadRequest)
 		return
 	}
 	doc, err := srv.cache.Put([]byte(req.RawDocument), waitPeriod)
 	if err != nil {
 		apiLogger.Errorf("put sumit document into cache return error: %v", err)
-		ctx.EmitError(iris.StatusBadRequest)
+		ctx.Error("poe server can't provider service now, sorry", iris.StatusInternalServerError)
 		return
 	}
 	apiLogger.Debugf("document request: %v, document ID: %s", req, doc.Id)
@@ -77,7 +81,7 @@ type GetProofStatusResponse struct {
 func (srv *APIServer) getProofStatus(ctx *iris.Context) {
 	documentID := ctx.Param("id")
 	if documentID == "" {
-		ctx.NotFound()
+		ctx.Error("document not found", iris.StatusNotFound)
 		return
 	}
 
@@ -120,9 +124,9 @@ type GetProofResponse struct {
 // getProof
 func (srv *APIServer) getProof(ctx *iris.Context) {
 	req := new(GetProofRequest)
-	if err := ctx.ReadForm(req); err != nil {
+	if err := ctx.ReadJSON(req); err != nil {
 		apiLogger.Errorf("read get proof document return error: %v", err)
-		ctx.Panic()
+		ctx.Error(err.Error(), iris.StatusBadRequest)
 		return
 	}
 
@@ -193,11 +197,11 @@ func (srv *APIServer) getDocs(ctx *iris.Context) {
 		docs, err = srv.persister.FindProofedDocs(count)
 		sort.Sort(ProofedDocs(docs))
 	default:
-		ctx.EmitError(iris.StatusBadRequest)
+		ctx.Error("not supported doc status type", iris.StatusBadRequest)
 		return
 	}
 	if err != nil {
-		ctx.JSON(iris.StatusInternalServerError, err)
+		ctx.Error(err.Error(), iris.StatusInternalServerError)
 		return
 	}
 
