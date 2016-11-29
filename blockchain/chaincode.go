@@ -1,6 +1,7 @@
 package blockchain
 
 import (
+	"errors"
 	"strings"
 	"sync"
 
@@ -8,29 +9,17 @@ import (
 	poepb "github.com/conseweb/poe/protos"
 	"github.com/hyperledger/fabric/events/consumer"
 	fabricpb "github.com/hyperledger/fabric/protos"
-	"github.com/spf13/viper"
 	"golang.org/x/crypto/sha3"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 )
 
-var (
-	// grpc client connection
-	grpcConn *grpc.ClientConn
-	// event client
-	eventClis []*consumer.EventsClient
-)
+var eventClis []*consumer.EventsClient
 
 type (
 	items struct {
 		lock *sync.RWMutex
 		data map[string]interface{}
-	}
-	chaincodeWrapper struct {
-		Name          string `json:"name,omitempty"`
-		Path          string `json:"path,omitempty"`
-		Language      string `json:"language,omitempty"`
-		SecureContext string `json:"secureContext,omitempty"`
 	}
 	eventAdapter struct {
 		sender *Blockchain
@@ -46,79 +35,109 @@ type (
 	}
 )
 
-func (this *items) Get(key string) interface{} {
-	this.lock.RLock()
-	defer this.lock.RUnlock()
-	if v, ok := this.data[key]; ok {
+func (self *items) Get(key string) interface{} {
+	self.lock.RLock()
+	defer self.lock.RUnlock()
+	if v, ok := self.data[key]; ok {
 		return v
 	}
 	return nil
 }
 
-func (this *items) Set(key string, val interface{}) bool {
-	this.lock.Lock()
-	defer this.lock.Unlock()
-	if v, ok := this.data[key]; !ok {
-		this.data[key] = val
+func (self *items) Set(key string, val interface{}) bool {
+	self.lock.Lock()
+	defer self.lock.Unlock()
+	if v, ok := self.data[key]; !ok {
+		self.data[key] = val
 	} else if v != val {
-		this.data[key] = val
+		self.data[key] = val
 	} else {
 		return false
 	}
 	return true
 }
 
-func (this *items) Delete(key string) {
-	this.lock.Lock()
-	defer this.lock.Unlock()
-	delete(this.data, key)
+func (self *items) Delete(key string) {
+	self.lock.Lock()
+	defer self.lock.Unlock()
+	delete(self.data, key)
 }
 
-func (this *items) Clear() {
-	this.lock.Lock()
-	defer this.lock.Unlock()
-	this.data = make(map[string]interface{})
+func (self *items) Clear() {
+	self.lock.Lock()
+	defer self.lock.Unlock()
+	self.data = make(map[string]interface{})
 }
 
-func newWrapper(key string) *chaincodeWrapper {
-	var (
-		wrapper chaincodeWrapper
-		e       error
-	)
-	if e = viper.UnmarshalKey(key, &wrapper); e != nil {
-		blockchainLogger.Error(e)
-		return nil
+func (adapter *eventAdapter) GetInterestedEvents() ([]*fabricpb.Interest, error) {
+	return []*fabricpb.Interest{{EventType: fabricpb.EventType_CHAINCODE, RegInfo: &fabricpb.Interest_ChaincodeRegInfo{ChaincodeRegInfo: &fabricpb.ChaincodeReg{ChaincodeID: adapter.sender.name, EventName: "invoke_completed"}}}}, nil
+}
+
+func (adapter *eventAdapter) Recv(msg *fabricpb.Event) (bool, error) {
+	if event, ok := msg.Event.(*fabricpb.Event_ChaincodeEvent); ok && event.ChaincodeEvent.ChaincodeID == adapter.sender.name {
+		if event.ChaincodeEvent.EventName == "invoke_completed" {
+			adapter.ecc <- event
+			return true, nil
+		}
 	}
-	return &wrapper
+	return true, nil
 }
 
-func (this *chaincodeWrapper) ToSpec(function string, args []string) *fabricpb.ChaincodeSpec {
+func (adapter *eventAdapter) Disconnected(e error) {
+	if e != nil {
+		blockchainLogger.Error(e)
+	}
+}
+
+func (bc *Blockchain) toSpec(function string, args []string) *fabricpb.ChaincodeSpec {
 	input := make([][]byte, 1, len(args)+1)
 	input[0] = []byte(function)
 	for _, v := range args {
 		input = append(input, []byte(v))
 	}
 	spec := &fabricpb.ChaincodeSpec{
-		Type: fabricpb.ChaincodeSpec_Type(fabricpb.ChaincodeSpec_Type_value[this.Language]),
+		Type: fabricpb.ChaincodeSpec_Type(fabricpb.ChaincodeSpec_Type_value["GOLANG"]),
 		ChaincodeID: &fabricpb.ChaincodeID{
-			Path: this.Path,
-			Name: this.Name,
+			Path: bc.path,
+			Name: bc.name,
 		},
 		CtorMsg: &fabricpb.ChaincodeInput{
 			Args: input,
 		},
-		SecureContext: this.SecureContext,
+		SecureContext: bc.secureCtx,
 	}
 	return spec
 }
 
-func (this *chaincodeWrapper) Execute(method, function string, args []string) ([]byte, error) {
+func (bc *Blockchain) execute(method, function string, args []string) ([]byte, error) {
 	var (
-		spec      = this.ToSpec(function, args)
-		devopsCli = fabricpb.NewDevopsClient(getGrpcConn())
+		opts []grpc.DialOption = []grpc.DialOption{
+			grpc.WithBlock(),
+			grpc.WithTimeout(bc.regTimeout),
+			grpc.WithInsecure(),
+		}
+		conn      *grpc.ClientConn
+		devopsCli fabricpb.DevopsClient
+		spec      = bc.toSpec(function, args)
+		peerAddr  string
 		resp      *fabricpb.Response
 		e         error
 	)
+	defer conn.Close()
+	for i := 0; i < bc.peerBackend.Len(); i++ {
+		peerAddr = bc.peerBackend.Choose().String()
+		for j := 0; j < bc.failOver; j++ {
+			conn, _ = grpc.Dial(peerAddr, opts...)
+			if conn != nil {
+				break
+			}
+			blockchainLogger.Infof("in bc func <execute> Could not create client conn to %s", peerAddr)
+		}
+	}
+	if conn == nil {
+		return nil, errors.New("in bc func <execute> create grpc client conn valid")
+	}
+	devopsCli = fabricpb.NewDevopsClient(conn)
 	switch method {
 	case "invoke":
 		resp, e = devopsCli.Invoke(context.Background(), &fabricpb.ChaincodeInvocationSpec{ChaincodeSpec: spec})
@@ -128,42 +147,27 @@ func (this *chaincodeWrapper) Execute(method, function string, args []string) ([
 	return resp.Msg, e
 }
 
-func (this *eventAdapter) GetInterestedEvents() ([]*fabricpb.Interest, error) {
-	return []*fabricpb.Interest{{EventType: fabricpb.EventType_CHAINCODE, RegInfo: &fabricpb.Interest_ChaincodeRegInfo{ChaincodeRegInfo: &fabricpb.ChaincodeReg{ChaincodeID: this.sender.wrapper.Name, EventName: "invoke_completed"}}}}, nil
-}
-
-func (this *eventAdapter) Recv(msg *fabricpb.Event) (bool, error) {
-	if event, ok := msg.Event.(*fabricpb.Event_ChaincodeEvent); ok && event.ChaincodeEvent.ChaincodeID == this.sender.wrapper.Name {
-		if event.ChaincodeEvent.EventName == "invoke_completed" {
-			this.ecc <- event
-			return true, nil
-		}
-	}
-	return true, nil
-}
-
-func (this *eventAdapter) Disconnected(e error) {
-	if e != nil {
-		blockchainLogger.Error(e)
-	}
-}
-
 // 启动事件监听
-func (this *Blockchain) EventStart() error {
+func (bc *Blockchain) eventStart() {
 	var (
-		adapter               = eventAdapter{sender: this, ecc: make(chan *fabricpb.Event_ChaincodeEvent)}
-		addressArray []string = strings.Split(viper.GetString("blockchain.event_address"), ",")
-		eventCli     *consumer.EventsClient
-		e            error
+		adapter  = eventAdapter{sender: bc, ecc: make(chan *fabricpb.Event_ChaincodeEvent)}
+		eventCli *consumer.EventsClient
+		e        error
 	)
-	for _, addr := range addressArray {
-		if eventCli, e = consumer.NewEventsClient(addr, viper.GetDuration("blockchain.reg_timeout"), &adapter); e != nil {
-			return e
+	for _, addr := range bc.events {
+		if eventCli, e = consumer.NewEventsClient(addr, bc.regTimeout, &adapter); e != nil {
+			blockchainLogger.Errorf("in bc func <eventStart> error: %v", e)
+			continue
 		}
 		if e = eventCli.Start(); e != nil {
-			return e
+			blockchainLogger.Errorf("in bc func <eventStart> error: %v", e)
+			continue
 		}
 		eventClis = append(eventClis, eventCli)
+	}
+	if eventCli == nil {
+		blockchainLogger.Error("in bc func <eventStart> create grpc client conn valid")
+		return
 	}
 	for {
 		select {
@@ -171,20 +175,15 @@ func (this *Blockchain) EventStart() error {
 			invokeCompleted(adapter.sender, ecc)
 		}
 	}
-	return nil
 }
 
-// 释放资源
-func (this *Blockchain) Close() error {
-	if grpcConn != nil {
-		grpcConn.Close()
-	}
-	if eventClis != nil {
-		for _, eventCli := range eventClis {
-			eventCli.Stop()
+func (bc *Blockchain) Close() error {
+	if len(eventClis) > 0 {
+		for _, cli := range eventClis {
+			cli.Stop()
 		}
 	}
-	this.items.Clear()
+	bc.items.Clear()
 	return nil
 }
 
@@ -207,27 +206,6 @@ func invokeCompleted(sender *Blockchain, e *fabricpb.Event_ChaincodeEvent) error
 
 		}
 		sender.items.Delete(e.ChaincodeEvent.TxID)
-	}
-	return nil
-}
-
-// get grpc conn
-func getGrpcConn() *grpc.ClientConn {
-	var (
-		opts []grpc.DialOption = []grpc.DialOption{
-			grpc.WithBlock(),
-			grpc.WithTimeout(viper.GetDuration("blockchain.reg_timeout")),
-			grpc.WithInsecure(),
-		}
-		addressArray []string = strings.Split(viper.GetString("blockchain.peer_address"), ",")
-	)
-	if grpcConn == nil {
-		for _, addr := range addressArray {
-			grpcConn, _ = grpc.Dial(addr, opts...)
-			if grpcConn != nil {
-				return grpcConn
-			}
-		}
 	}
 	return nil
 }

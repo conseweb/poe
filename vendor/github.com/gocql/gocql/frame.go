@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net"
 	"runtime"
 	"strings"
@@ -275,7 +276,6 @@ type frameHeader struct {
 	op            frameOp
 	length        int
 	customPayload map[string][]byte
-	warnings      []string
 }
 
 func (f frameHeader) String() string {
@@ -469,7 +469,11 @@ func (f *framer) parseFrame() (frame frame, err error) {
 	}
 
 	if f.header.flags&flagWarning == flagWarning {
-		f.header.warnings = f.readStringList()
+		warnings := f.readStringList()
+		// what to do with warnings?
+		for _, v := range warnings {
+			log.Println(v)
+		}
 	}
 
 	if f.header.flags&flagCustomPayload == flagCustomPayload {

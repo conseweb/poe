@@ -210,8 +210,6 @@ func (p *asyncProducer) Close() error {
 		for event := range p.errors {
 			errors = append(errors, event)
 		}
-	} else {
-		<-p.errors
 	}
 
 	if len(errors) > 0 {

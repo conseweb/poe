@@ -711,7 +711,7 @@ func newCachedMuxEntry(f *Framework, bodyHandler HandlerFunc, expiration time.Du
 		f.ReleaseCtx(ctx)
 	}
 
-	cachedHandler := httpcache.CacheFasthttpFunc(fhandler, expiration)
+	cachedHandler := httpcache.CacheFasthttp(fhandler, expiration)
 	return &cachedMuxEntry{
 		cachedHandler: cachedHandler,
 	}

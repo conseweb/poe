@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"math/rand"
 	"net"
 	"sync"
@@ -421,11 +422,11 @@ func (pool *hostConnPool) logConnectErr(err error) {
 		// connection refused
 		// these are typical during a node outage so avoid log spam.
 		if gocqlDebug {
-			Logger.Printf("unable to dial %q: %v\n", pool.host.Peer(), err)
+			log.Printf("unable to dial %q: %v\n", pool.host.Peer(), err)
 		}
 	} else if err != nil {
 		// unexpected error
-		Logger.Printf("error: failed to connect to %s due to error: %v", pool.addr, err)
+		log.Printf("error: failed to connect to %s due to error: %v", pool.addr, err)
 	}
 }
 

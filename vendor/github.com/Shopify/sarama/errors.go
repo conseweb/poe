@@ -108,7 +108,6 @@ const (
 	ErrUnsupportedSASLMechanism        KError = 33
 	ErrIllegalSASLState                KError = 34
 	ErrUnsupportedVersion              KError = 35
-	ErrUnsupportedForMessageFormat     KError = 43
 )
 
 func (err KError) Error() string {
@@ -189,8 +188,6 @@ func (err KError) Error() string {
 		return "kafka server: Request is not valid given the current SASL state."
 	case ErrUnsupportedVersion:
 		return "kafka server: The version of API is not supported."
-	case ErrUnsupportedForMessageFormat:
-		return "kafka server: The requested operation is not supported by the message format version."
 	}
 
 	return fmt.Sprintf("Unknown error, how did this happen? Error code = %d", err)

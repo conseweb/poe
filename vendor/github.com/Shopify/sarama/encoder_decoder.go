@@ -1,10 +1,6 @@
 package sarama
 
-import (
-	"fmt"
-
-	"github.com/rcrowley/go-metrics"
-)
+import "fmt"
 
 // Encoder is the interface that wraps the basic Encode method.
 // Anything implementing Encoder can be turned into bytes using Kafka's encoding rules.
@@ -12,8 +8,8 @@ type encoder interface {
 	encode(pe packetEncoder) error
 }
 
-// Encode takes an Encoder and turns it into bytes while potentially recording metrics.
-func encode(e encoder, metricRegistry metrics.Registry) ([]byte, error) {
+// Encode takes an Encoder and turns it into bytes.
+func encode(e encoder) ([]byte, error) {
 	if e == nil {
 		return nil, nil
 	}
@@ -31,7 +27,6 @@ func encode(e encoder, metricRegistry metrics.Registry) ([]byte, error) {
 	}
 
 	realEnc.raw = make([]byte, prepEnc.length)
-	realEnc.registry = metricRegistry
 	err = e.encode(&realEnc)
 	if err != nil {
 		return nil, err
