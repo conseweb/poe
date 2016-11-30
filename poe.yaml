@@ -99,11 +99,11 @@ persist:
 #
 #########################################################
 blockchain:
-  chainCodeId: "43c937d1b0236f0897b5670c9f0e7a11898b904a1f9665536807f41aa9d7059eed8179a42e2d07bbfb6e551d1f8fa29974877d38219993600c4c847f3c0eecb4"
+  chainCodeId: "3577fa32818a208e9255e56eb982782828152c6d0a3266b51cfed13bdbd5c029858df871b880daf1603aee8db3819a13ff9d4ac17a362b0ab649f6a4a1d248d6"
   path: "github.com/conseweb/common/assets/poe"
   secureCtx: "jim"
   balance: "round-robin"
-  peers: "172.17.0.3:7051,172.17.0.4:7051,172.17.0.6:7051,172.17.0.5:7051"
-  events: "172.17.0.3:7053,172.17.0.4:7053,172.17.0.6:7053,172.17.0.5:7053"
+  peers: 172.17.0.3:7051 172.17.0.4:7051 172.17.0.6:7051 172.17.0.5:7051
+  events: 172.17.0.3:7053 172.17.0.4:7053 172.17.0.6:7053 172.17.0.5:7053
   regTimeout: 3s
   failOver: 3
