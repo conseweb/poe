@@ -2,26 +2,24 @@ package blockchain
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"sync"
 
 	"github.com/conseweb/common/crypto"
 	poepb "github.com/conseweb/poe/protos"
-	"github.com/hyperledger/fabric/events/consumer"
 	fabricpb "github.com/hyperledger/fabric/protos"
 	"golang.org/x/crypto/sha3"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 )
 
-var eventClis []*consumer.EventsClient
-
 type (
 	items struct {
 		lock *sync.RWMutex
 		data map[string]interface{}
 	}
-	eventAdapter struct {
+	eccAdapter struct {
 		sender *Blockchain
 		ecc    chan *fabricpb.Event_ChaincodeEvent
 	}
@@ -69,12 +67,15 @@ func (self *items) Clear() {
 	self.data = make(map[string]interface{})
 }
 
-func (adapter *eventAdapter) GetInterestedEvents() ([]*fabricpb.Interest, error) {
-	return []*fabricpb.Interest{{EventType: fabricpb.EventType_CHAINCODE, RegInfo: &fabricpb.Interest_ChaincodeRegInfo{ChaincodeRegInfo: &fabricpb.ChaincodeReg{ChaincodeID: adapter.sender.name, EventName: "invoke_completed"}}}}, nil
+func newEccAdapter(sender *Blockchain) *eccAdapter {
+	return &eccAdapter{sender: sender, ecc: make(chan *fabricpb.Event_ChaincodeEvent)}
+}
+func (adapter *eccAdapter) GetInterestedEvents() ([]*fabricpb.Interest, error) {
+	return []*fabricpb.Interest{{EventType: fabricpb.EventType_CHAINCODE, RegInfo: &fabricpb.Interest_ChaincodeRegInfo{ChaincodeRegInfo: &fabricpb.ChaincodeReg{ChaincodeID: adapter.sender.chainCodeId, EventName: "invoke_completed"}}}}, nil
 }
 
-func (adapter *eventAdapter) Recv(msg *fabricpb.Event) (bool, error) {
-	if event, ok := msg.Event.(*fabricpb.Event_ChaincodeEvent); ok && event.ChaincodeEvent.ChaincodeID == adapter.sender.name {
+func (adapter *eccAdapter) Recv(msg *fabricpb.Event) (bool, error) {
+	if event, ok := msg.Event.(*fabricpb.Event_ChaincodeEvent); ok && event.ChaincodeEvent.ChaincodeID == adapter.sender.chainCodeId {
 		if event.ChaincodeEvent.EventName == "invoke_completed" {
 			adapter.ecc <- event
 			return true, nil
@@ -83,7 +84,7 @@ func (adapter *eventAdapter) Recv(msg *fabricpb.Event) (bool, error) {
 	return true, nil
 }
 
-func (adapter *eventAdapter) Disconnected(e error) {
+func (adapter *eccAdapter) Disconnected(e error) {
 	if e != nil {
 		blockchainLogger.Error(e)
 	}
@@ -111,32 +112,25 @@ func (bc *Blockchain) toSpec(function string, args []string) *fabricpb.Chaincode
 
 func (bc *Blockchain) execute(method, function string, args []string) ([]byte, error) {
 	var (
-		opts []grpc.DialOption = []grpc.DialOption{
-			grpc.WithBlock(),
-			grpc.WithTimeout(bc.regTimeout),
-			grpc.WithInsecure(),
-		}
 		conn      *grpc.ClientConn
 		devopsCli fabricpb.DevopsClient
 		spec      = bc.toSpec(function, args)
-		peerAddr  string
 		resp      *fabricpb.Response
 		e         error
 	)
-	defer conn.Close()
 	for i := 0; i < bc.peerBackend.Len(); i++ {
-		peerAddr = bc.peerBackend.Choose().String()
-		for j := 0; j < bc.failOver; j++ {
-			conn, _ = grpc.Dial(peerAddr, opts...)
-			if conn != nil {
-				break
-			}
-			blockchainLogger.Infof("in bc func <execute> Could not create client conn to %s", peerAddr)
+		conn, e = bc.getGrpcConn(bc.peerBackend.Choose().String())
+		if e != nil {
+			blockchainLogger.Error(e)
+		}
+		if conn != nil {
+			break
 		}
 	}
 	if conn == nil {
 		return nil, errors.New("in bc func <execute> create grpc client conn valid")
 	}
+	defer conn.Close()
 	devopsCli = fabricpb.NewDevopsClient(conn)
 	switch method {
 	case "invoke":
@@ -144,29 +138,38 @@ func (bc *Blockchain) execute(method, function string, args []string) ([]byte, e
 	case "query":
 		resp, e = devopsCli.Query(context.Background(), &fabricpb.ChaincodeInvocationSpec{ChaincodeSpec: spec})
 	}
+	if e != nil {
+		return nil, e
+	}
+	if resp == nil {
+		return nil, errors.New("in bc func <execute> resp is nil")
+	}
 	return resp.Msg, e
 }
 
 // 启动事件监听
 func (bc *Blockchain) eventStart() {
 	var (
-		adapter  = eventAdapter{sender: bc, ecc: make(chan *fabricpb.Event_ChaincodeEvent)}
-		eventCli *consumer.EventsClient
-		e        error
+		adapter = eccAdapter{sender: bc, ecc: make(chan *fabricpb.Event_ChaincodeEvent)}
+		ecli    *eventsClient
+		conn    *grpc.ClientConn
+		e       error
 	)
 	for _, addr := range bc.events {
-		if eventCli, e = consumer.NewEventsClient(addr, bc.regTimeout, &adapter); e != nil {
-			blockchainLogger.Errorf("in bc func <eventStart> error: %v", e)
+		conn, e = bc.getGrpcConn(addr)
+		if e != nil {
+			blockchainLogger.Error("in bc func <eventStart> error: %v", e)
 			continue
 		}
-		if e = eventCli.Start(); e != nil {
-			blockchainLogger.Errorf("in bc func <eventStart> error: %v", e)
+		ecli = newEventsClient(conn, &adapter, bc.regTimeout)
+		if e = ecli.Start(); e != nil {
+			blockchainLogger.Error("in bc func <eventStart> error: %v", e)
 			continue
 		}
-		eventClis = append(eventClis, eventCli)
+		bc.eClis = append(bc.eClis, ecli)
 	}
-	if eventCli == nil {
-		blockchainLogger.Error("in bc func <eventStart> create grpc client conn valid")
+	if len(bc.eClis) == 0 {
+		blockchainLogger.Error("in bc func <eventStart> event client valid")
 		return
 	}
 	for {
@@ -178,13 +181,35 @@ func (bc *Blockchain) eventStart() {
 }
 
 func (bc *Blockchain) Close() error {
-	if len(eventClis) > 0 {
-		for _, cli := range eventClis {
-			cli.Stop()
-		}
+	if len(bc.eClis) == 0 {
+		return nil
+	}
+	for _, ecli := range bc.eClis {
+		ecli.Stop()
 	}
 	bc.items.Clear()
 	return nil
+}
+
+func (bc *Blockchain) getGrpcConn(addr string) (*grpc.ClientConn, error) {
+	var (
+		conn *grpc.ClientConn
+		opts []grpc.DialOption = []grpc.DialOption{
+			grpc.WithBlock(),
+			grpc.WithTimeout(bc.regTimeout),
+			grpc.WithInsecure(),
+		}
+	)
+	for i := 0; i < bc.failOver; i++ {
+		conn, _ = grpc.Dial(addr, opts...)
+		if conn != nil {
+			break
+		}
+	}
+	if conn == nil {
+		return nil, fmt.Errorf("Could not create client conn to %s", addr)
+	}
+	return conn, nil
 }
 
 // invoke_completed 事件响应处理
@@ -200,10 +225,8 @@ func invokeCompleted(sender *Blockchain, e *fabricpb.Event_ChaincodeEvent) error
 					docIds[idx] = doc.Id
 				}
 				blockchainLogger.Infof("<invokeCompleted> proofKey: %s", proofKey)
-				blockchainLogger.Infof("<invokeCompleted> docs: %v", docIds)
 				go sender.persister.SetDocsBlockDigest(docIds, crypto.Hash(sha3.New512(), []byte(proofKey)))
 			}
-
 		}
 		sender.items.Delete(e.ChaincodeEvent.TxID)
 	}

@@ -45,6 +45,7 @@ type Blockchain struct {
 	peers       []string
 	peerBackend backends
 	events      []string
+	eClis       []*eventsClient
 	regTimeout  time.Duration
 	failOver    int
 	items       *items
@@ -58,22 +59,22 @@ func NewBlockchain(cc cache.CacheInterface, persister persist.PersistInterface) 
 	bc.name = "blockchain"
 	bc.chainCodeId = viper.GetString("blockchain.chainCodeId")
 	if len(strings.TrimSpace(bc.chainCodeId)) == 0 {
-		blockchainLogger.Errorf("in bc func <NewBlockchain> config item <blockchain.chainCodeId> is not valid,Cannot be empty or contain null characters")
+		blockchainLogger.Error("in bc func <NewBlockchain> config item <blockchain.chainCodeId> is not valid,Cannot be empty or contain null characters")
 		return nil
 	}
 	bc.path = viper.GetString("blockchain.path")
 	if len(strings.TrimSpace(bc.path)) == 0 {
-		blockchainLogger.Errorf("in bc func <NewBlockchain> config item <blockchain.path> is not valid,Cannot be empty or contain null characters")
+		blockchainLogger.Error("in bc func <NewBlockchain> config item <blockchain.path> is not valid,Cannot be empty or contain null characters")
 		return nil
 	}
 	bc.secureCtx = viper.GetString("blockchain.secureCtx")
 	if len(strings.TrimSpace(bc.secureCtx)) == 0 {
-		blockchainLogger.Errorf("in bc func <NewBlockchain> config item <blockchain.secureCtx> is not valid,Cannot be empty or contain null characters")
+		blockchainLogger.Error("in bc func <NewBlockchain> config item <blockchain.secureCtx> is not valid,Cannot be empty or contain null characters")
 		return nil
 	}
 	bc.peers = viper.GetStringSlice("blockchain.peers")
 	if len(bc.peers) == 0 {
-		blockchainLogger.Errorf("in bc func <NewBlockchain> config item <blockchain.peers> is not valid,Cannot be contain null")
+		blockchainLogger.Error("in bc func <NewBlockchain> config item <blockchain.peers> is not valid,Cannot be contain null")
 		return nil
 	}
 	bc.balance = viper.GetString("blockchain.balance")
@@ -81,11 +82,6 @@ func NewBlockchain(cc cache.CacheInterface, persister persist.PersistInterface) 
 		bc.balance = "round-robin"
 	}
 	bc.peerBackend = build(bc.balance, bc.peers)
-	bc.events = viper.GetStringSlice("blockchain.events")
-	if len(bc.events) == 0 {
-		blockchainLogger.Errorf("in bc func <NewBlockchain> config item <blockchain.events> is not valid,Cannot be contain null")
-		return nil
-	}
 	bc.regTimeout = viper.GetDuration("blockchain.regTimeout")
 	if bc.regTimeout.String() == "0s" {
 		bc.regTimeout = 3
@@ -93,6 +89,11 @@ func NewBlockchain(cc cache.CacheInterface, persister persist.PersistInterface) 
 	bc.failOver = viper.GetInt("blockchain.failover")
 	if bc.failOver == 0 {
 		bc.failOver = 3
+	}
+	bc.events = viper.GetStringSlice("blockchain.events")
+	if len(bc.events) == 0 {
+		blockchainLogger.Error("in bc func <NewBlockchain> config item <blockchain.events> is not valid,Cannot be contain null")
+		return nil
 	}
 	bc.items = &items{lock: new(sync.RWMutex), data: make(map[string]interface{})}
 	bc.cacher = cc
