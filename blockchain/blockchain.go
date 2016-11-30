@@ -122,18 +122,21 @@ func (bc *Blockchain) formatDocs(docs []*protos.Document) string {
 func (bc *Blockchain) VerifyDocs(docs []*protos.Document) bool {
 	formatedDocs := bc.formatDocs(docs)
 	if formatedDocs == "" {
+		blockchainLogger.Info("in bc func <VerifyDocs> formatedDocs is empty")
 		return false
 	}
+	blockchainLogger.Infof("in bc func <VerifyDocs> formatedDocs: %s", formatedDocs)
 	data, e := bc.execute("query", "existence", []string{"base", formatedDocs})
 	if e != nil {
-		blockchainLogger.Error(e)
+		blockchainLogger.Errorf("in bc func <VerifyDocs> error: %v", e)
 		return false
 	}
 	var result []queryResult
 	if e = json.Unmarshal(data, &result); e != nil {
-		blockchainLogger.Error(e)
+		blockchainLogger.Errorf("in bc func <VerifyDocs> error: %v", e)
 		return false
 	}
+	blockchainLogger.Infof("in bc func <VerifyDocs> result: %v", result)
 	if len(result) > 0 {
 		return result[0].Exist
 	}
@@ -147,13 +150,17 @@ func (bc *Blockchain) VerifyDocs(docs []*protos.Document) bool {
 func (bc *Blockchain) RegisterProof(docs []*protos.Document) {
 	formatedDocs := bc.formatDocs(docs)
 	if formatedDocs == "" {
+		blockchainLogger.Info("in bc func <RegisterProof> formatedDocs is empty")
 		return
 	}
+	blockchainLogger.Infof("in bc func <RegisterProof> formatedDocs: %s", formatedDocs)
 	data, e := bc.execute("invoke", "register", []string{"base", formatedDocs})
 	if e != nil {
+
 		blockchainLogger.Error(e)
 	}
 	bc.items.Set(string(data), docs)
+	blockchainLogger.Infof("in bc func <RegisterProof> txid: %s", string(data))
 	// TODO put formatedDocs into chaincode, and query proof key, hash the key as documents block digest, send to persister
 	//proofKey := "sdjfoiwejflsjfoiwejflsf"
 
