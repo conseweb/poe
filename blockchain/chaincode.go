@@ -6,6 +6,8 @@ import (
 	"strings"
 	"sync"
 
+	"reflect"
+
 	"github.com/conseweb/common/crypto"
 	poepb "github.com/conseweb/poe/protos"
 	fabricpb "github.com/hyperledger/fabric/protos"
@@ -100,7 +102,7 @@ func (bc *Blockchain) toSpec(function string, args []string) *fabricpb.Chaincode
 		Type: fabricpb.ChaincodeSpec_Type(fabricpb.ChaincodeSpec_Type_value["GOLANG"]),
 		ChaincodeID: &fabricpb.ChaincodeID{
 			Path: bc.path,
-			Name: bc.name,
+			Name: bc.chainCodeId,
 		},
 		CtorMsg: &fabricpb.ChaincodeInput{
 			Args: input,
@@ -118,17 +120,20 @@ func (bc *Blockchain) execute(method, function string, args []string) ([]byte, e
 		resp      *fabricpb.Response
 		e         error
 	)
+	blockchainLogger.Infof("in bc func <execute> spec: %v", spec)
 	for i := 0; i < bc.peerBackend.Len(); i++ {
 		conn, e = bc.getGrpcConn(bc.peerBackend.Choose().String())
 		if e != nil {
-			blockchainLogger.Error(e)
+			blockchainLogger.Errorf("in bc func <execute> error: %v", e)
 		}
+		blockchainLogger.Infof("in bc func <execute> peerBackend index : %v", i)
 		if conn != nil {
 			break
 		}
 	}
 	if conn == nil {
-		return nil, errors.New("in bc func <execute> create grpc client conn valid")
+		blockchainLogger.Error("in bc func <execute> create grpc client conn valid")
+		return nil, errors.New("create grpc client conn valid")
 	}
 	defer conn.Close()
 	devopsCli = fabricpb.NewDevopsClient(conn)
@@ -142,8 +147,10 @@ func (bc *Blockchain) execute(method, function string, args []string) ([]byte, e
 		return nil, e
 	}
 	if resp == nil {
-		return nil, errors.New("in bc func <execute> resp is nil")
+		blockchainLogger.Error("in bc func <execute> resp is nil")
+		return nil, errors.New("resp is nil")
 	}
+	blockchainLogger.Info("in bc func <execute> exec over")
 	return resp.Msg, e
 }
 
@@ -158,12 +165,12 @@ func (bc *Blockchain) eventStart() {
 	for _, addr := range bc.events {
 		conn, e = bc.getGrpcConn(addr)
 		if e != nil {
-			blockchainLogger.Error("in bc func <eventStart> error: %v", e)
+			blockchainLogger.Errorf("in bc func <eventStart> error: %v", e)
 			continue
 		}
 		ecli = newEventsClient(conn, &adapter, bc.regTimeout)
 		if e = ecli.Start(); e != nil {
-			blockchainLogger.Error("in bc func <eventStart> error: %v", e)
+			blockchainLogger.Errorf("in bc func <eventStart> error: %v", e)
 			continue
 		}
 		bc.eClis = append(bc.eClis, ecli)
@@ -175,7 +182,9 @@ func (bc *Blockchain) eventStart() {
 	for {
 		select {
 		case ecc := <-adapter.ecc:
+			blockchainLogger.Info("<invokeCompleted> start")
 			invokeCompleted(adapter.sender, ecc)
+			blockchainLogger.Info("<invokeCompleted> exec over")
 		}
 	}
 }
@@ -188,6 +197,7 @@ func (bc *Blockchain) Close() error {
 		ecli.Stop()
 	}
 	bc.items.Clear()
+	blockchainLogger.Info("in bc func <Close> exec over")
 	return nil
 }
 
@@ -207,14 +217,18 @@ func (bc *Blockchain) getGrpcConn(addr string) (*grpc.ClientConn, error) {
 		}
 	}
 	if conn == nil {
+		blockchainLogger.Errorf("in bc func <getGrpcConn> error : Could not create client conn to %s", addr)
 		return nil, fmt.Errorf("Could not create client conn to %s", addr)
 	}
+	blockchainLogger.Info("in bc func <getGrpcConn> exec over")
 	return conn, nil
 }
 
 // invoke_completed 事件响应处理
 func invokeCompleted(sender *Blockchain, e *fabricpb.Event_ChaincodeEvent) error {
+	blockchainLogger.Infof("<invokeCompleted> event: %v", e)
 	obj := sender.items.Get(e.ChaincodeEvent.TxID)
+	blockchainLogger.Infof("<invokeCompleted> obj: %s type of : %s", obj, reflect.TypeOf(obj).String())
 	if obj != nil {
 		if docs, ok := obj.([]*poepb.Document); ok {
 			data := strings.Split(string(e.ChaincodeEvent.Payload), ",")
