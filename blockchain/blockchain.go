@@ -59,22 +59,22 @@ func NewBlockchain(cc cache.CacheInterface, persister persist.PersistInterface) 
 	bc.name = "blockchain"
 	bc.chainCodeId = viper.GetString("blockchain.chainCodeId")
 	if len(strings.TrimSpace(bc.chainCodeId)) == 0 {
-		blockchainLogger.Error("in bc func <NewBlockchain> config item <blockchain.chainCodeId> is not valid,Cannot be empty or contain null characters")
+		blockchainLogger.Debug("in bc func <NewBlockchain> config item <blockchain.chainCodeId> is not valid,Cannot be empty or contain null characters")
 		return nil
 	}
 	bc.path = viper.GetString("blockchain.path")
 	if len(strings.TrimSpace(bc.path)) == 0 {
-		blockchainLogger.Error("in bc func <NewBlockchain> config item <blockchain.path> is not valid,Cannot be empty or contain null characters")
+		blockchainLogger.Debug("in bc func <NewBlockchain> config item <blockchain.path> is not valid,Cannot be empty or contain null characters")
 		return nil
 	}
 	bc.secureCtx = viper.GetString("blockchain.secureCtx")
 	if len(strings.TrimSpace(bc.secureCtx)) == 0 {
-		blockchainLogger.Error("in bc func <NewBlockchain> config item <blockchain.secureCtx> is not valid,Cannot be empty or contain null characters")
+		blockchainLogger.Debug("in bc func <NewBlockchain> config item <blockchain.secureCtx> is not valid,Cannot be empty or contain null characters")
 		return nil
 	}
 	bc.peers = viper.GetStringSlice("blockchain.peers")
 	if len(bc.peers) == 0 {
-		blockchainLogger.Error("in bc func <NewBlockchain> config item <blockchain.peers> is not valid,Cannot be contain null")
+		blockchainLogger.Debug("in bc func <NewBlockchain> config item <blockchain.peers> is not valid,Cannot be contain null")
 		return nil
 	}
 	bc.balance = viper.GetString("blockchain.balance")
@@ -92,7 +92,7 @@ func NewBlockchain(cc cache.CacheInterface, persister persist.PersistInterface) 
 	}
 	bc.events = viper.GetStringSlice("blockchain.events")
 	if len(bc.events) == 0 {
-		blockchainLogger.Error("in bc func <NewBlockchain> config item <blockchain.events> is not valid,Cannot be contain null")
+		blockchainLogger.Debug("in bc func <NewBlockchain> config item <blockchain.events> is not valid,Cannot be contain null")
 		return nil
 	}
 	bc.items = &items{lock: new(sync.RWMutex), data: make(map[string]interface{})}
@@ -122,21 +122,21 @@ func (bc *Blockchain) formatDocs(docs []*protos.Document) string {
 func (bc *Blockchain) VerifyDocs(docs []*protos.Document) bool {
 	formatedDocs := bc.formatDocs(docs)
 	if formatedDocs == "" {
-		blockchainLogger.Info("in bc func <VerifyDocs> formatedDocs is empty")
+		blockchainLogger.Debug("in bc func <VerifyDocs> formatedDocs is empty")
 		return false
 	}
-	blockchainLogger.Infof("in bc func <VerifyDocs> formatedDocs: %s", formatedDocs)
+	blockchainLogger.Debugf("in bc func <VerifyDocs> formatedDocs: %s", formatedDocs)
 	data, e := bc.execute("query", "existence", []string{"base", formatedDocs})
 	if e != nil {
-		blockchainLogger.Errorf("in bc func <VerifyDocs> error: %v", e)
+		blockchainLogger.Warningf("in bc func <VerifyDocs> error: %v", e)
 		return false
 	}
 	var result []queryResult
 	if e = json.Unmarshal(data, &result); e != nil {
-		blockchainLogger.Errorf("in bc func <VerifyDocs> error: %v", e)
+		blockchainLogger.Warningf("in bc func <VerifyDocs> error: %v", e)
 		return false
 	}
-	blockchainLogger.Infof("in bc func <VerifyDocs> result: %v", result)
+	blockchainLogger.Debugf("in bc func <VerifyDocs> result: %v", result)
 	if len(result) > 0 {
 		return result[0].Exist
 	}
@@ -150,17 +150,17 @@ func (bc *Blockchain) VerifyDocs(docs []*protos.Document) bool {
 func (bc *Blockchain) RegisterProof(docs []*protos.Document) {
 	formatedDocs := bc.formatDocs(docs)
 	if formatedDocs == "" {
-		blockchainLogger.Info("in bc func <RegisterProof> formatedDocs is empty")
+		blockchainLogger.Debug("in bc func <RegisterProof> formatedDocs is empty")
 		return
 	}
-	blockchainLogger.Infof("in bc func <RegisterProof> formatedDocs: %s", formatedDocs)
+	blockchainLogger.Debugf("in bc func <RegisterProof> formatedDocs: %s", formatedDocs)
 	data, e := bc.execute("invoke", "register", []string{"base", formatedDocs})
 	if e != nil {
-
-		blockchainLogger.Error(e)
+		blockchainLogger.Warningf("in bc func <eventStart> error: %v", e)
+		return
 	}
 	bc.items.Set(string(data), docs)
-	blockchainLogger.Infof("in bc func <RegisterProof> txid: %s", string(data))
+	blockchainLogger.Debugf("in bc func <RegisterProof> txid: %s", string(data))
 	// TODO put formatedDocs into chaincode, and query proof key, hash the key as documents block digest, send to persister
 	//proofKey := "sdjfoiwejflsjfoiwejflsf"
 
