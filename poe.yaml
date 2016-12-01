@@ -85,8 +85,17 @@ persist:
     # cassandra clusters
     clusters: u2.mj u3.mj u4.mj
 
+    # debug mode
+    debug: true
+
     # cassandra keyspace
     keyspace: poe
+
+    # username
+    username:
+
+    # password
+    password:
 
   # leveldb section
   leveldb:
@@ -99,11 +108,11 @@ persist:
 #
 #########################################################
 blockchain:
-  chainCodeId: "4f95e69b8de76340c48427d0e5d44d76aac26c8f7deebafc4cc5250d604af05b09a941d4bec23ad5301a635c9b87e260ed97f5c8301a05b0003b0b43f6942e39"
+  chainCodeId: "43c937d1b0236f0897b5670c9f0e7a11898b904a1f9665536807f41aa9d7059eed8179a42e2d07bbfb6e551d1f8fa29974877d38219993600c4c847f3c0eecb4"
   path: "github.com/conseweb/common/assets/poe"
   secureCtx: "jim"
   balance: "round-robin"
-  peers: 172.17.0.3:7051 172.17.0.4:7051 172.17.0.6:7051 172.17.0.5:7051
-  events: 172.17.0.3:7053 172.17.0.4:7053 172.17.0.6:7053 172.17.0.5:7053
+  peers: u5.mj:7051
+  events: u5.mj:7053
   regTimeout: 3s
   failOver: 3
