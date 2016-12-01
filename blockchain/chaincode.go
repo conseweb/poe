@@ -264,7 +264,7 @@ func invokeCompleted(sender *Blockchain, e *fabricpb.Event_ChaincodeEvent) error
 		docIds[idx] = doc.Id
 	}
 	blockchainLogger.Debugf("<invokeCompleted> proofKey: %s", proofKey)
-	go sender.persister.SetDocsBlockDigest(docIds, crypto.Hash(sha3.New512(), []byte(proofKey)))
+	go sender.persister.SetDocsBlockDigest(docIds, fmt.Sprintf("%x", crypto.Hash(sha3.New512(), []byte(proofKey))))
 	sender.items.Delete(e.ChaincodeEvent.TxID)
 	return nil
 }
