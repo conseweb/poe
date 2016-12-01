@@ -6,8 +6,6 @@ import (
 	"strings"
 	"sync"
 
-	"reflect"
-
 	"github.com/conseweb/common/crypto"
 	poepb "github.com/conseweb/poe/protos"
 	fabricpb "github.com/hyperledger/fabric/protos"
@@ -199,9 +197,7 @@ func (bc *Blockchain) eventStart() {
 	for {
 		select {
 		case ecc := <-adapter.ecc:
-			blockchainLogger.Debug("<invokeCompleted> start")
-			invokeCompleted(adapter.sender, ecc)
-			blockchainLogger.Debug("<invokeCompleted> exec over")
+			go invokeCompleted(adapter.sender, ecc)
 		}
 	}
 }
@@ -243,28 +239,28 @@ func (bc *Blockchain) getGrpcConn(addr string) (*grpc.ClientConn, error) {
 
 // invoke_completed 事件响应处理
 func invokeCompleted(sender *Blockchain, e *fabricpb.Event_ChaincodeEvent) error {
-	blockchainLogger.Debugf("<invokeCompleted> event: %v", e)
+	blockchainLogger.Debugf("blockchain event: %v", e)
 	obj := sender.items.Get(e.ChaincodeEvent.TxID)
 	if obj == nil {
-		blockchainLogger.Debug("<invokeCompleted> obj is nil")
-		return nil
+		blockchainLogger.Warningf("txID %s has no documents stored", e.ChaincodeEvent.TxID)
+		return fmt.Errorf("not found stored documents")
 	}
-	blockchainLogger.Debugf("<invokeCompleted> obj: %v type of : %s", obj, reflect.TypeOf(obj).String())
+	blockchainLogger.Debugf("txID: %s, documents: %v", e.ChaincodeEvent.TxID, obj)
 	docs, ok := obj.([]*poepb.Document)
-	if ok {
-		return nil
+	if !ok {
+		return fmt.Errorf("invalid stored type, should be a slice of documents pointer")
 	}
 	data := strings.Split(string(e.ChaincodeEvent.Payload), ",")
-	if len(data) == 0 {
-		return nil
+	if len(data) == 0 || data[0] == "" {
+		return fmt.Errorf("empty chaincode event payload")
 	}
-	proofKey := data[0]
+	proofKey := fmt.Sprintf("%x", crypto.Hash(sha3.New512(), []byte(data[0])))
 	docIds := make([]string, len(docs))
 	for idx, doc := range docs {
 		docIds[idx] = doc.Id
 	}
-	blockchainLogger.Debugf("<invokeCompleted> proofKey: %s", proofKey)
-	go sender.persister.SetDocsBlockDigest(docIds, fmt.Sprintf("%x", crypto.Hash(sha3.New512(), []byte(proofKey))))
+	blockchainLogger.Debugf("proofKey: %s", proofKey)
+	sender.persister.SetDocsBlockDigest(docIds, proofKey)
 	sender.items.Delete(e.ChaincodeEvent.TxID)
 	return nil
 }

@@ -141,9 +141,6 @@ func (bc *Blockchain) VerifyDocs(docs []*protos.Document) bool {
 		return result[0].Exist
 	}
 	return false
-	// TODO connect to chaincode peers to verify
-	//blockchainLogger.Debug("verify documents return true")
-	//return true
 }
 
 // RegisterProof
