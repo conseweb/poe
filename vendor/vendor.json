@@ -204,6 +204,12 @@
 			"revisionTime": "2016-10-31T04:20:56Z"
 		},
 		{
+			"checksumSHA1": "xTXNDjF6hPArwEpHBunSOtrvi38=",
+			"path": "github.com/hyperledger/fabric/core/comm",
+			"revision": "b50db2b2540299bfdc581227b9f195d9b6c49711",
+			"revisionTime": "2016-11-02T16:50:10Z"
+		},
+		{
 			"checksumSHA1": "UH5duux7GQ40D28QJiQfvmCGj9c=",
 			"path": "github.com/hyperledger/fabric/core/crypto/primitives",
 			"revision": "b50db2b2540299bfdc581227b9f195d9b6c49711",
@@ -218,6 +224,12 @@
 		{
 			"checksumSHA1": "s9Sd9Yp6uYrIjS5rLH62mnj9ZZ4=",
 			"path": "github.com/hyperledger/fabric/core/util",
+			"revision": "b50db2b2540299bfdc581227b9f195d9b6c49711",
+			"revisionTime": "2016-11-02T16:50:10Z"
+		},
+		{
+			"checksumSHA1": "CaNEGJ7DXxUnPMioPJxqS6BeqjE=",
+			"path": "github.com/hyperledger/fabric/events/consumer",
 			"revision": "b50db2b2540299bfdc581227b9f195d9b6c49711",
 			"revisionTime": "2016-11-02T16:50:10Z"
 		},

@@ -70,26 +70,43 @@ func (self *items) Clear() {
 }
 
 func newEccAdapter(sender *Blockchain) *eccAdapter {
-	return &eccAdapter{sender: sender, ecc: make(chan *fabricpb.Event_ChaincodeEvent)}
+	ecapt := eccAdapter{}
+	ecapt.sender = sender
+	ecapt.ecc = make(chan *fabricpb.Event_ChaincodeEvent)
+	return &ecapt
 }
 func (adapter *eccAdapter) GetInterestedEvents() ([]*fabricpb.Interest, error) {
-	return []*fabricpb.Interest{{EventType: fabricpb.EventType_CHAINCODE, RegInfo: &fabricpb.Interest_ChaincodeRegInfo{ChaincodeRegInfo: &fabricpb.ChaincodeReg{ChaincodeID: adapter.sender.chainCodeId, EventName: "invoke_completed"}}}}, nil
+	eccReg := fabricpb.ChaincodeReg{}
+	eccReg.ChaincodeID = adapter.sender.chainCodeId
+	eccReg.EventName = "invoke_completed"
+	eccInReg := fabricpb.Interest_ChaincodeRegInfo{}
+	eccInReg.ChaincodeRegInfo = &eccReg
+	eccIn := fabricpb.Interest{}
+	eccIn.EventType = fabricpb.EventType_CHAINCODE
+	eccIn.RegInfo = &eccInReg
+	return []*fabricpb.Interest{&eccIn}, nil
 }
 
 func (adapter *eccAdapter) Recv(msg *fabricpb.Event) (bool, error) {
-	if event, ok := msg.Event.(*fabricpb.Event_ChaincodeEvent); ok && event.ChaincodeEvent.ChaincodeID == adapter.sender.chainCodeId {
-		if event.ChaincodeEvent.EventName == "invoke_completed" {
-			adapter.ecc <- event
-			return true, nil
-		}
+	event, ok := msg.Event.(*fabricpb.Event_ChaincodeEvent)
+	if !ok {
+		return false, nil
 	}
+	if event.ChaincodeEvent.ChaincodeID != adapter.sender.chainCodeId {
+		return false, nil
+	}
+	if event.ChaincodeEvent.EventName != "invoke_completed" {
+		return false, nil
+	}
+	adapter.ecc <- event
 	return true, nil
 }
 
 func (adapter *eccAdapter) Disconnected(e error) {
-	if e != nil {
-		blockchainLogger.Error(e)
+	if e == nil {
+		return
 	}
+	blockchainLogger.Debugf("in adapter func <Disconnected> error: %v", e)
 }
 
 func (bc *Blockchain) toSpec(function string, args []string) *fabricpb.ChaincodeSpec {
@@ -120,19 +137,19 @@ func (bc *Blockchain) execute(method, function string, args []string) ([]byte, e
 		resp      *fabricpb.Response
 		e         error
 	)
-	blockchainLogger.Infof("in bc func <execute> spec: %v", spec)
+	blockchainLogger.Debugf("in bc func <execute> spec: %v", spec)
 	for i := 0; i < bc.peerBackend.Len(); i++ {
 		conn, e = bc.getGrpcConn(bc.peerBackend.Choose().String())
 		if e != nil {
-			blockchainLogger.Errorf("in bc func <execute> error: %v", e)
+			blockchainLogger.Warningf("in bc func <execute> error: %v", e)
 		}
-		blockchainLogger.Infof("in bc func <execute> peerBackend index : %v", i)
+		blockchainLogger.Debugf("in bc func <execute> peerBackend index : %v", i)
 		if conn != nil {
 			break
 		}
 	}
 	if conn == nil {
-		blockchainLogger.Error("in bc func <execute> create grpc client conn valid")
+		blockchainLogger.Debug("in bc func <execute> create grpc client conn valid")
 		return nil, errors.New("create grpc client conn valid")
 	}
 	defer conn.Close()
@@ -147,10 +164,10 @@ func (bc *Blockchain) execute(method, function string, args []string) ([]byte, e
 		return nil, e
 	}
 	if resp == nil {
-		blockchainLogger.Error("in bc func <execute> resp is nil")
+		blockchainLogger.Debug("in bc func <execute> resp is nil")
 		return nil, errors.New("resp is nil")
 	}
-	blockchainLogger.Info("in bc func <execute> exec over")
+	blockchainLogger.Debug("in bc func <execute> exec over")
 	return resp.Msg, e
 }
 
@@ -165,26 +182,26 @@ func (bc *Blockchain) eventStart() {
 	for _, addr := range bc.events {
 		conn, e = bc.getGrpcConn(addr)
 		if e != nil {
-			blockchainLogger.Errorf("in bc func <eventStart> error: %v", e)
+			blockchainLogger.Warningf("in bc func <eventStart> error: %v", e)
 			continue
 		}
 		ecli = newEventsClient(conn, &adapter, bc.regTimeout)
 		if e = ecli.Start(); e != nil {
-			blockchainLogger.Errorf("in bc func <eventStart> error: %v", e)
+			blockchainLogger.Warningf("in bc func <eventStart> error: %v", e)
 			continue
 		}
 		bc.eClis = append(bc.eClis, ecli)
 	}
 	if len(bc.eClis) == 0 {
-		blockchainLogger.Error("in bc func <eventStart> event client valid")
+		blockchainLogger.Debug("in bc func <eventStart> event client valid")
 		return
 	}
 	for {
 		select {
 		case ecc := <-adapter.ecc:
-			blockchainLogger.Info("<invokeCompleted> start")
+			blockchainLogger.Debug("<invokeCompleted> start")
 			invokeCompleted(adapter.sender, ecc)
-			blockchainLogger.Info("<invokeCompleted> exec over")
+			blockchainLogger.Debug("<invokeCompleted> exec over")
 		}
 	}
 }
@@ -197,7 +214,7 @@ func (bc *Blockchain) Close() error {
 		ecli.Stop()
 	}
 	bc.items.Clear()
-	blockchainLogger.Info("in bc func <Close> exec over")
+	blockchainLogger.Debug("in bc func <Close> exec over")
 	return nil
 }
 
@@ -217,7 +234,7 @@ func (bc *Blockchain) getGrpcConn(addr string) (*grpc.ClientConn, error) {
 		}
 	}
 	if conn == nil {
-		blockchainLogger.Errorf("in bc func <getGrpcConn> error : Could not create client conn to %s", addr)
+		blockchainLogger.Debug("in bc func <getGrpcConn> error : Could not create client conn to %s", addr)
 		return nil, fmt.Errorf("Could not create client conn to %s", addr)
 	}
 	blockchainLogger.Info("in bc func <getGrpcConn> exec over")
@@ -226,23 +243,28 @@ func (bc *Blockchain) getGrpcConn(addr string) (*grpc.ClientConn, error) {
 
 // invoke_completed 事件响应处理
 func invokeCompleted(sender *Blockchain, e *fabricpb.Event_ChaincodeEvent) error {
-	blockchainLogger.Infof("<invokeCompleted> event: %v", e)
+	blockchainLogger.Debugf("<invokeCompleted> event: %v", e)
 	obj := sender.items.Get(e.ChaincodeEvent.TxID)
-	blockchainLogger.Infof("<invokeCompleted> obj: %s type of : %s", obj, reflect.TypeOf(obj).String())
-	if obj != nil {
-		if docs, ok := obj.([]*poepb.Document); ok {
-			data := strings.Split(string(e.ChaincodeEvent.Payload), ",")
-			if len(data) > 0 {
-				proofKey := data[0]
-				docIds := make([]string, len(docs))
-				for idx, doc := range docs {
-					docIds[idx] = doc.Id
-				}
-				blockchainLogger.Infof("<invokeCompleted> proofKey: %s", proofKey)
-				go sender.persister.SetDocsBlockDigest(docIds, crypto.Hash(sha3.New512(), []byte(proofKey)))
-			}
-		}
-		sender.items.Delete(e.ChaincodeEvent.TxID)
+	if obj == nil {
+		blockchainLogger.Debug("<invokeCompleted> obj is nil")
+		return nil
 	}
+	blockchainLogger.Debugf("<invokeCompleted> obj: %v type of : %s", obj, reflect.TypeOf(obj).String())
+	docs, ok := obj.([]*poepb.Document)
+	if ok {
+		return nil
+	}
+	data := strings.Split(string(e.ChaincodeEvent.Payload), ",")
+	if len(data) == 0 {
+		return nil
+	}
+	proofKey := data[0]
+	docIds := make([]string, len(docs))
+	for idx, doc := range docs {
+		docIds[idx] = doc.Id
+	}
+	blockchainLogger.Debugf("<invokeCompleted> proofKey: %s", proofKey)
+	go sender.persister.SetDocsBlockDigest(docIds, crypto.Hash(sha3.New512(), []byte(proofKey)))
+	sender.items.Delete(e.ChaincodeEvent.TxID)
 	return nil
 }
