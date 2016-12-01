@@ -18,6 +18,7 @@ package cassandra
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/conseweb/poe/protos"
 	"github.com/gocql/gocql"
@@ -46,6 +47,17 @@ CREATE INDEX ON poe.documents(hash);
 CREATE INDEX ON poe.documents(blockDigest);
 CREATE INDEX ON poe.documents(transactionId);
 */
+
+type Document struct {
+	DocId         string `cql:"id"`
+	DocHash       string `cql:"hash"`
+	BlockDigest   string `cql:"blockDigest,omitempty"`
+	SubmitTime    int64  `cql:"submitTime"`
+	ProofTime     int64  `cql:"proofTime,omitempty"`
+	WaitDuration  int64  `cql:"waitDuration"`
+	TransactionId string `cql:"transactionId,omitempty"`
+}
+
 type CassandraPersister struct {
 	session *gocql.Session
 }
@@ -53,7 +65,6 @@ type CassandraPersister struct {
 // NewCassandraPersister returns a cassandra persister
 func NewCassandraPersister() *CassandraPersister {
 	flogging.LoggingInit("cassandra")
-
 	csdra := new(CassandraPersister)
 
 	cluster := gocql.NewCluster(viper.GetStringSlice("persist.cassandra.clusters")...)
@@ -80,7 +91,7 @@ func (c *CassandraPersister) PutDocsIntoDB(docs []*protos.Document) error {
 
 func (c *CassandraPersister) GetDocFromDBByDocID(docID string) (*protos.Document, error) {
 	if docID == "" {
-		return nil, fmt.Errorf("ivalid document id")
+		return nil, fmt.Errorf("empty document id")
 	}
 
 	doc := &protos.Document{}
@@ -98,9 +109,12 @@ func (c *CassandraPersister) SetDocsBlockDigest(docIDs []string, digest string) 
 		return nil
 	}
 
-	if err := c.session.Query("UPDATE documents SET blockDigest = ? WHERE id in (?)", digest, docIDs).Exec(); err != nil {
-		cassandraLogger.Warningf("set documents blockDigest return error: %v", err)
-		return err
+	nowUTCTs := time.Now().UTC().Unix()
+	for _, docID := range docIDs {
+		if err := c.session.Query("UPDATE documents SET blockDigest = ?, proofTime = ? WHERE id = ?", digest, nowUTCTs, docID).Exec(); err != nil {
+			cassandraLogger.Warningf("set documents blockDigest return error: %v", err)
+			return err
+		}
 	}
 
 	return nil
