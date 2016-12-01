@@ -251,13 +251,14 @@ func invokeCompleted(sender *Blockchain, e *fabricpb.Event_ChaincodeEvent) error
 	}
 	blockchainLogger.Debugf("<invokeCompleted> obj: %v type of : %s", obj, reflect.TypeOf(obj).String())
 	docs, ok := obj.([]*poepb.Document)
-	if ok {
+	if !ok {
 		return nil
 	}
-	data := strings.Split(string(e.ChaincodeEvent.Payload), ",")
-	if len(data) == 0 {
+	payLoad := string(e.ChaincodeEvent.Payload)
+	if len(payLoad) == 0 {
 		return nil
 	}
+	data := strings.Split(payLoad, ",")
 	proofKey := data[0]
 	docIds := make([]string, len(docs))
 	for idx, doc := range docs {
