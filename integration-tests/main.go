@@ -18,9 +18,9 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"sync"
 	"time"
-	"log"
 
 	"github.com/conseweb/common/semaphore"
 	"github.com/conseweb/poe/api"

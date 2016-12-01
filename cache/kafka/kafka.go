@@ -121,7 +121,7 @@ func (k *KafkaCache) Put(raw []byte, waitDuration time.Duration) (*protos.Docume
 		kafkaLogger.Errorf("kafka producer send message return error: %v", err)
 		return nil, err
 	}
-	kafkaLogger.Debugf("proto.Document[%s] has sent to kafka partition: %d, offset: %d", doc.Id, partition, offset)
+	kafkaLogger.Debugf("%s partition: %d, offset: %d", doc.Id, partition, offset)
 
 	return doc, nil
 }

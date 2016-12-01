@@ -61,7 +61,7 @@ func (srv *APIServer) submitRaw(ctx *iris.Context) {
 		ctx.Error("poe server can't provider service now, sorry", iris.StatusInternalServerError)
 		return
 	}
-	apiLogger.Debugf("document request: %v, document ID: %s", req, doc.Id)
+	apiLogger.Debugf("<%s, %v>", doc.Id, req)
 
 	ctx.JSON(iris.StatusCreated, DocumentSubmitResponse{
 		DocumentID:       doc.Id,
@@ -164,6 +164,7 @@ func (srv *APIServer) getProof(ctx *iris.Context) {
 		ctx.JSON(iris.StatusOK, response)
 		return
 	}
+	apiLogger.Debugf("using same blockdigest docs: %v", blockDocs)
 
 	// verify by blockchain
 	if srv.blcokchain.VerifyDocs(blockDocs) {
