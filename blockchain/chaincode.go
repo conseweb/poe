@@ -251,7 +251,7 @@ func invokeCompleted(sender *Blockchain, e *fabricpb.Event_ChaincodeEvent) error
 		return fmt.Errorf("invalid stored type, should be a slice of documents pointer")
 	}
 	data := strings.Split(string(e.ChaincodeEvent.Payload), ",")
-	if len(data) == 0 {
+	if len(data) == 0 || data[0] == "" {
 		return fmt.Errorf("empty chaincode event payload")
 	}
 	proofKey := fmt.Sprintf("%x", crypto.Hash(sha3.New512(), []byte(data[0])))
