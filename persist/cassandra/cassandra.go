@@ -99,7 +99,7 @@ func (c *CassandraPersister) GetDocFromDBByDocID(docID string) (*protos.Document
 		cassandraLogger.Warningf("get document[%s] from Db return error: %v", docID, err)
 		return nil, err
 	}
-	cassandraLogger.Debugf("get doc[%s] from db: %v", docID, doc)
+	cassandraLogger.Debugf("doc: %v", doc)
 
 	return doc, nil
 }

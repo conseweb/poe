@@ -17,9 +17,9 @@ limitations under the License.
 package utils
 
 import (
+	"fmt"
 	"gopkg.in/check.v1"
 	"testing"
-	"fmt"
 )
 
 func Test(t *testing.T) {
@@ -48,4 +48,3 @@ func (t *DocumentTest) BenchmarkDocumentHash(c *check.C) {
 		DocumentHash([]byte(fmt.Sprintf("sdfjiwjeflsajdfi9jsdfijisdf_%d", i)))
 	}
 }
-

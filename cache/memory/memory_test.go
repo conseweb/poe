@@ -17,9 +17,9 @@ limitations under the License.
 package memory
 
 import (
+	"fmt"
 	"gopkg.in/check.v1"
 	"testing"
-	"fmt"
 	"time"
 )
 
