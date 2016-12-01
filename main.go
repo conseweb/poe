@@ -46,7 +46,11 @@ func main() {
 	persister := persist.NewPersister(cc)
 
 	// blockchain
-	bc := blockchain.NewBlockchain(cc, persister)
+	bc, err := blockchain.NewBlockchain(cc, persister)
+	if err != nil {
+		mainLogger.Errorf("create blockchain failure,error : %v,the program over.", err)
+		exec.HandleSignal(persist.Close, cc.Close)
+	}
 	// api server
 	apisrv := api.NewAPIServer(cc, persister, bc)
 	go apisrv.Start()

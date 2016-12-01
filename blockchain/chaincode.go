@@ -67,21 +67,16 @@ func (self *items) Clear() {
 	self.data = make(map[string]interface{})
 }
 
-func newEccAdapter(sender *Blockchain) *eccAdapter {
-	ecapt := eccAdapter{}
-	ecapt.sender = sender
-	ecapt.ecc = make(chan *fabricpb.Event_ChaincodeEvent)
-	return &ecapt
-}
 func (adapter *eccAdapter) GetInterestedEvents() ([]*fabricpb.Interest, error) {
-	eccReg := fabricpb.ChaincodeReg{}
-	eccReg.ChaincodeID = adapter.sender.chainCodeId
-	eccReg.EventName = "invoke_completed"
-	eccInReg := fabricpb.Interest_ChaincodeRegInfo{}
-	eccInReg.ChaincodeRegInfo = &eccReg
-	eccIn := fabricpb.Interest{}
-	eccIn.EventType = fabricpb.EventType_CHAINCODE
-	eccIn.RegInfo = &eccInReg
+	eccIn := fabricpb.Interest{
+		EventType: fabricpb.EventType_CHAINCODE,
+		RegInfo: &fabricpb.Interest_ChaincodeRegInfo{
+			ChaincodeRegInfo: &fabricpb.ChaincodeReg{
+				ChaincodeID: adapter.sender.chainCodeId,
+				EventName:   "invoke_completed",
+			},
+		},
+	}
 	return []*fabricpb.Interest{&eccIn}, nil
 }
 

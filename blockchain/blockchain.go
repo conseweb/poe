@@ -18,6 +18,7 @@ package blockchain
 
 import (
 	"encoding/json"
+	"errors"
 	"sort"
 	"strings"
 	"sync"
@@ -38,44 +39,44 @@ var (
 // Blockchain
 type Blockchain struct {
 	name        string
-	chainCodeId string
-	path        string
-	secureCtx   string
-	balance     string
-	peers       []string
-	peerBackend backends
-	events      []string
-	eClis       []*eventsClient
-	regTimeout  time.Duration
-	failOver    int
-	items       *items
+	chainCodeId string          // chaincode 服务唯一标识
+	path        string          // chaincode 源码路径
+	secureCtx   string          // chaincode 安全上下文，即账户名，默认jim
+	balance     string          // 负载均衡算法
+	peers       []string        // peer 服务地址列表
+	peerBackend backends        // peer 负载均衡器,用于选取一个可用的地址
+	events      []string        // peer 事件监听地址列表
+	eClis       []*eventsClient // peer 事件集合
+	regTimeout  time.Duration   // grpc 超时设置，默认3s
+	failOver    int             // grpc 允许链接失败次数
+	items       *items          // 存储临时信息，方便异步通讯传参
 	cacher      cache.CacheInterface
 	persister   persist.PersistInterface
 }
 
 // NewBlockchain returns a blockchain handler
-func NewBlockchain(cc cache.CacheInterface, persister persist.PersistInterface) *Blockchain {
+func NewBlockchain(cc cache.CacheInterface, persister persist.PersistInterface) (*Blockchain, error) {
 	bc := Blockchain{}
 	bc.name = "blockchain"
 	bc.chainCodeId = viper.GetString("blockchain.chainCodeId")
 	if len(strings.TrimSpace(bc.chainCodeId)) == 0 {
 		blockchainLogger.Debug("in bc func <NewBlockchain> config item <blockchain.chainCodeId> is not valid,Cannot be empty or contain null characters")
-		return nil
+		return nil, errors.New("config item <blockchain.chainCodeId> can not be empty.")
 	}
 	bc.path = viper.GetString("blockchain.path")
 	if len(strings.TrimSpace(bc.path)) == 0 {
 		blockchainLogger.Debug("in bc func <NewBlockchain> config item <blockchain.path> is not valid,Cannot be empty or contain null characters")
-		return nil
+		return nil, errors.New("config item <blockchain.path> can not be empty.")
 	}
 	bc.secureCtx = viper.GetString("blockchain.secureCtx")
 	if len(strings.TrimSpace(bc.secureCtx)) == 0 {
 		blockchainLogger.Debug("in bc func <NewBlockchain> config item <blockchain.secureCtx> is not valid,Cannot be empty or contain null characters")
-		return nil
+		return nil, errors.New("config item <blockchain.secureCtx> can not be empty.")
 	}
 	bc.peers = viper.GetStringSlice("blockchain.peers")
 	if len(bc.peers) == 0 {
 		blockchainLogger.Debug("in bc func <NewBlockchain> config item <blockchain.peers> is not valid,Cannot be contain null")
-		return nil
+		return nil, errors.New("config item <blockchain.peers> can not be empty.")
 	}
 	bc.balance = viper.GetString("blockchain.balance")
 	if len(strings.TrimSpace(bc.balance)) == 0 {
@@ -93,15 +94,14 @@ func NewBlockchain(cc cache.CacheInterface, persister persist.PersistInterface) 
 	bc.events = viper.GetStringSlice("blockchain.events")
 	if len(bc.events) == 0 {
 		blockchainLogger.Debug("in bc func <NewBlockchain> config item <blockchain.events> is not valid,Cannot be contain null")
-		return nil
+		return nil, errors.New("config item <blockchain.events> can not be empty.")
 	}
 	bc.items = &items{lock: new(sync.RWMutex), data: make(map[string]interface{})}
 	bc.cacher = cc
 	bc.persister = persister
 	go bc.eventStart()
 	go bc.continueProof()
-	return &bc
-
+	return &bc, nil
 }
 
 func (bc *Blockchain) formatDocs(docs []*protos.Document) string {
