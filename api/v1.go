@@ -55,13 +55,15 @@ func (srv *APIServer) submitRaw(ctx *iris.Context) {
 		ctx.Error("proofWaitPeriod format is invalid", iris.StatusBadRequest)
 		return
 	}
+
+	apiLogger.Debugf("receive<%s, %s>", req.RawDocument, waitPeriod.String())
 	doc, err := srv.cache.Put([]byte(req.RawDocument), waitPeriod)
 	if err != nil {
 		apiLogger.Errorf("put sumit document into cache return error: %v", err)
 		ctx.Error("poe server can't provider service now, sorry", iris.StatusInternalServerError)
 		return
 	}
-	apiLogger.Debugf("<%s, %v>", doc.Id, req)
+	apiLogger.Debugf("return<%s>", doc.Id[:8])
 
 	ctx.JSON(iris.StatusCreated, DocumentSubmitResponse{
 		DocumentID:       doc.Id,
