@@ -3,9 +3,9 @@ package blockchain
 import (
 	"errors"
 	"fmt"
-	"strings"
 	"sync"
 
+	"github.com/chanxuehong/wechat.v2/json"
 	"github.com/conseweb/common/crypto"
 	poepb "github.com/conseweb/poe/protos"
 	fabricpb "github.com/hyperledger/fabric/protos"
@@ -67,16 +67,21 @@ func (self *items) Clear() {
 	self.data = make(map[string]interface{})
 }
 
+func newEccAdapter(sender *Blockchain) *eccAdapter {
+	ecapt := eccAdapter{}
+	ecapt.sender = sender
+	ecapt.ecc = make(chan *fabricpb.Event_ChaincodeEvent)
+	return &ecapt
+}
 func (adapter *eccAdapter) GetInterestedEvents() ([]*fabricpb.Interest, error) {
-	eccIn := fabricpb.Interest{
-		EventType: fabricpb.EventType_CHAINCODE,
-		RegInfo: &fabricpb.Interest_ChaincodeRegInfo{
-			ChaincodeRegInfo: &fabricpb.ChaincodeReg{
-				ChaincodeID: adapter.sender.chainCodeId,
-				EventName:   "invoke_completed",
-			},
-		},
-	}
+	eccReg := fabricpb.ChaincodeReg{}
+	eccReg.ChaincodeID = adapter.sender.chainCodeId
+	eccReg.EventName = "invoke_completed"
+	eccInReg := fabricpb.Interest_ChaincodeRegInfo{}
+	eccInReg.ChaincodeRegInfo = &eccReg
+	eccIn := fabricpb.Interest{}
+	eccIn.EventType = fabricpb.EventType_CHAINCODE
+	eccIn.RegInfo = &eccInReg
 	return []*fabricpb.Interest{&eccIn}, nil
 }
 
@@ -240,22 +245,30 @@ func invokeCompleted(sender *Blockchain, e *fabricpb.Event_ChaincodeEvent) error
 		blockchainLogger.Warningf("txID %s has no documents stored", e.ChaincodeEvent.TxID)
 		return fmt.Errorf("not found stored documents")
 	}
-	blockchainLogger.Debugf("txID: %s, documents: %v", e.ChaincodeEvent.TxID, obj)
+	blockchainLogger.Debugf("txID: %s, docs: %v", e.ChaincodeEvent.TxID, obj)
 	docs, ok := obj.([]*poepb.Document)
 	if !ok {
 		return fmt.Errorf("invalid stored type, should be a slice of documents pointer")
 	}
-	payLoad := string(e.ChaincodeEvent.Payload)
-	if len(payLoad) == 0 {
-		return fmt.Errorf("empty chaincode event payload")
+
+	proofResults := make(map[string]string)
+	if err := json.Unmarshal(e.ChaincodeEvent.Payload, &proofResults); err != nil {
+		blockchainLogger.Errorf("json.marshal err: %v", err)
+		return err
 	}
-	data := strings.Split(payLoad, ",")
-	proofKey := fmt.Sprintf("%x", crypto.Hash(sha3.New512(), []byte(data[0])))
+	proofHash, ok := proofResults[sender.formatDocs(docs)]
+	if !ok {
+		blockchainLogger.Errorf("doc has not been proofed")
+		return fmt.Errorf("doc has not been proofed")
+	}
+
+	proofKey := fmt.Sprintf("%x", crypto.Hash(sha3.New512(), []byte(proofHash)))
 	docIds := make([]string, len(docs))
 	for idx, doc := range docs {
 		docIds[idx] = doc.Id
 	}
-	blockchainLogger.Debugf("<invokeCompleted> proofKey: %s", proofKey)
+
+	blockchainLogger.Debugf("proofKey: %s, docIds: %v", proofKey, docIds)
 	sender.persister.SetDocsBlockDigest(docIds, proofKey)
 	sender.items.Delete(e.ChaincodeEvent.TxID)
 	return nil

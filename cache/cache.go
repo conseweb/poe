@@ -19,12 +19,12 @@ package cache
 import (
 	"time"
 
+	"github.com/conseweb/poe/cache/kafka"
 	"github.com/conseweb/poe/cache/memory"
 	"github.com/conseweb/poe/protos"
 	"github.com/hyperledger/fabric/flogging"
 	"github.com/op/go-logging"
 	"github.com/spf13/viper"
-	"github.com/conseweb/poe/cache/kafka"
 )
 
 var (

@@ -32,6 +32,6 @@ func DocumentID(doc []byte) string {
 }
 
 // DocumentHash returns document hash, maybe not unique
-func DocumentHash(doc []byte) string  {
+func DocumentHash(doc []byte) string {
 	return fmt.Sprintf("%x", crypto.Hash(sha3.New512(), []byte(fmt.Sprintf("%x%x%d", crypto.Hash(sha256.New(), doc), crypto.Hash(md5.New(), doc), len(doc)))))
 }
