@@ -108,6 +108,9 @@ func continuePersist(cc cache.CacheInterface) {
 		for _, period := range periodLimits {
 			go func(period *utils.PeriodLimit, dc chan<- *protos.Document) {
 				topic := cc.Topic(period.Period)
+				cc.Subscribe(persisterName, topic)
+
+				persistLogger.Debugf("%s get topic[%s] documents", persisterName, topic)
 				docs, err := cc.Get(persisterName, topic, period.Limit)
 				if err != nil {
 					persistLogger.Warningf("get topic %s documents from cache return error: %v", topic, err)
@@ -115,7 +118,7 @@ func continuePersist(cc cache.CacheInterface) {
 				}
 
 				for idx, doc := range docs {
-					persistLogger.Debugf("doc[%d] from cache: %v", idx, doc.Id)
+					persistLogger.Debugf("%d %v", idx, doc.Id)
 					dc <- doc
 				}
 			}(period, dc)
@@ -163,7 +166,7 @@ func continuePersist(cc cache.CacheInterface) {
 				continue
 			}
 
-			persistLogger.Debugf("documents queue is full, put %d documents into DB", len(docQueue))
+			persistLogger.Debugf("documents queue is full, put %d docs into DB", len(docQueue))
 			putDocumentsIntoDB(docQueue)
 			docQueue = make([]*protos.Document, 0)
 		case <-queueTimeoutTicker.C:
@@ -171,7 +174,7 @@ func continuePersist(cc cache.CacheInterface) {
 				continue
 			}
 
-			persistLogger.Debugf("documents queue timeout, put %d documents into DB", len(docQueue))
+			persistLogger.Debugf("documents queue timeout, put %d docs into DB", len(docQueue))
 			putDocumentsIntoDB(docQueue)
 			docQueue = make([]*protos.Document, 0)
 		}

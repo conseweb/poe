@@ -17,12 +17,15 @@ limitations under the License.
 package blockchain
 
 import (
+	"crypto/sha256"
 	"encoding/json"
+	"fmt"
 	"sort"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/NebulousLabs/merkletree"
 	"github.com/conseweb/poe/cache"
 	"github.com/conseweb/poe/persist"
 	"github.com/conseweb/poe/protos"
@@ -101,7 +104,6 @@ func NewBlockchain(cc cache.CacheInterface, persister persist.PersistInterface) 
 	go bc.eventStart()
 	go bc.continueProof()
 	return &bc
-
 }
 
 func (bc *Blockchain) formatDocs(docs []*protos.Document) string {
@@ -114,11 +116,15 @@ func (bc *Blockchain) formatDocs(docs []*protos.Document) string {
 		ds[idx] = doc.Id
 	}
 	sort.Strings(ds)
-	formatedDocs := strings.Join(ds, "")
 
-	blockchainLogger.Debugf("sorted docs: %v", docs)
-	blockchainLogger.Debugf("formated docs: %s", formatedDocs)
-	return formatedDocs
+	tree := merkletree.New(sha256.New())
+	for _, doc := range ds {
+		tree.Push([]byte(doc))
+	}
+	merkletreeRoot := fmt.Sprintf("%x", tree.Root())
+
+	blockchainLogger.Debugf("formated docs: %s", merkletreeRoot)
+	return merkletreeRoot
 }
 
 // VerifyDocs verify whether documents are unchanged
