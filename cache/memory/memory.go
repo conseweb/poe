@@ -23,6 +23,7 @@ import (
 
 	"github.com/conseweb/poe/protos"
 	"github.com/conseweb/poe/utils"
+	"github.com/conseweb/poe/tsp"
 )
 
 // MemoryCache
@@ -54,11 +55,12 @@ func (m *MemoryCache) Put(raw []byte, waitDuration time.Duration) (*protos.Docum
 		m.vals[topic] = make(map[string]*protos.Document)
 	}
 
+	nowTime := tsp.Time()
 	doc := &protos.Document{
-		Id:           m.DocumentID(raw),
+		Id:           m.DocumentID(raw, nowTime),
 		Raw:          raw,
 		Hash:         m.DocumentHash(raw),
-		SubmitTime:   time.Now().UTC().Unix(),
+		SubmitTime:   nowTime.UnixNano(),
 		WaitDuration: int64(waitDuration),
 	}
 	m.vals[topic][doc.Id] = doc
@@ -70,8 +72,8 @@ func (m *MemoryCache) Topic(d time.Duration) string {
 	return fmt.Sprintf("memory_%s", d.String())
 }
 
-func (m *MemoryCache) DocumentID(rawData []byte) string {
-	return utils.DocumentID(rawData)
+func (m *MemoryCache) DocumentID(rawData []byte, t time.Time) string {
+	return utils.DocumentID(rawData, t)
 }
 
 func (m *MemoryCache) DocumentHash(raw []byte) string {

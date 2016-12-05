@@ -32,6 +32,7 @@ import (
 	"github.com/hyperledger/fabric/flogging"
 	"github.com/op/go-logging"
 	"github.com/spf13/viper"
+	"github.com/conseweb/poe/tsp"
 )
 
 var (
@@ -100,11 +101,13 @@ func NewKafkaCache() *KafkaCache {
 
 func (k *KafkaCache) Put(raw []byte, waitDuration time.Duration) (*protos.Document, error) {
 	topic := k.Topic(waitDuration)
+	nowTime := tsp.Time()
+
 	doc := &protos.Document{
-		Id:           k.DocumentID(raw),
+		Id:           k.DocumentID(raw, nowTime),
 		Raw:          raw,
 		Hash:         k.DocumentHash(raw),
-		SubmitTime:   time.Now().UTC().Unix(),
+		SubmitTime:   nowTime.UnixNano(),
 		WaitDuration: int64(waitDuration),
 	}
 	docBytes, err := proto.Marshal(doc)
@@ -253,8 +256,8 @@ func (k *KafkaCache) Topic(d time.Duration) string {
 	return fmt.Sprintf("kafka_%s", d.String())
 }
 
-func (k *KafkaCache) DocumentID(rawData []byte) string {
-	return utils.DocumentID(rawData)
+func (k *KafkaCache) DocumentID(rawData []byte, t time.Time) string {
+	return utils.DocumentID(rawData, t)
 }
 
 func (k *KafkaCache) DocumentHash(raw []byte) string {

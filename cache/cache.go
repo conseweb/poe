@@ -47,7 +47,7 @@ type CacheInterface interface {
 	Topic(d time.Duration) string
 
 	// DocumentID
-	DocumentID(rawData []byte) string
+	DocumentID(rawData []byte, t time.Time) string
 
 	// DocumentHash
 	DocumentHash(raw []byte) string

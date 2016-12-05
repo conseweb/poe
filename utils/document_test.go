@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"gopkg.in/check.v1"
 	"testing"
+	"github.com/conseweb/poe/tsp"
 )
 
 func Test(t *testing.T) {
@@ -39,7 +40,7 @@ func (t *DocumentTest) TestDocumentHash(c *check.C) {
 
 func (t *DocumentTest) BenchmarkDocumentID(c *check.C) {
 	for i := 0; i < c.N; i++ {
-		DocumentID([]byte(fmt.Sprintf("sdfjiwjeflsajdfi9jsdfijisdf_%d", i)))
+		DocumentID([]byte(fmt.Sprintf("sdfjiwjeflsajdfi9jsdfijisdf_%d", i)), tsp.Time())
 	}
 }
 
