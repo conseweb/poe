@@ -1,11 +1,11 @@
 package blockchain
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
 
-	"github.com/chanxuehong/wechat.v2/json"
 	"github.com/conseweb/common/crypto"
 	poepb "github.com/conseweb/poe/protos"
 	fabricpb "github.com/hyperledger/fabric/protos"

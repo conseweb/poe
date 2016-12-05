@@ -1,5 +1,5 @@
 # poe
-Proof of Exists
+Proof of Existence
 
 ## 开发测试流程
 * 添加了`vendor`目录，以后的修改需要在本地执行`make test` 通过后提交pr，有需要引用其它第三方包的需要通过`govendor` 命令进行添加或者版本的更新。

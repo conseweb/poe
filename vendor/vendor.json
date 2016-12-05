@@ -8,6 +8,12 @@
 			"revision": ""
 		},
 		{
+			"checksumSHA1": "htp4w18DtiVMO8N5YWl5S1EexSE=",
+			"path": "github.com/NebulousLabs/merkletree",
+			"revision": "f01b2e9039dd48372d3e54c5121bf4efba21b8dc",
+			"revisionTime": "2016-02-03T22:21:43Z"
+		},
+		{
 			"checksumSHA1": "zVTDR7RxyzflslTMLc1x7WdC8SE=",
 			"path": "github.com/Shopify/sarama",
 			"revision": "fd498173ae2bfc49a2b4eb19353241317785e7e6",
@@ -741,6 +747,12 @@
 			"path": "gopkg.in/alecthomas/kingpin.v2",
 			"revision": "e9044be3ab2a8e11d4e1f418d12f0790d57e8d70",
 			"revisionTime": "2016-08-29T10:30:05Z"
+		},
+		{
+			"checksumSHA1": "I2d7Kn572Fz02mnnlcI4MHXCu0c=",
+			"path": "gopkg.in/check.v1",
+			"revision": "4f90aeace3a26ad7021961c297b22c42160c7b25",
+			"revisionTime": "2016-01-05T16:49:36Z"
 		},
 		{
 			"checksumSHA1": "6f8MEU31llHM1sLM/GGH4/Qxu0A=",

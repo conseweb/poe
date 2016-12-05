@@ -44,8 +44,8 @@ const (
 
 var (
 	host        = kingpin.Flag("host", "host of poe").Short('h').Default("http://0.0.0.0:9694").String()
-	concurrency = kingpin.Flag("concurrency", "request concurrency").Short('c').Default("100").Int()
-	tn          = kingpin.Flag("tn", "number of tests").Short('n').Default("1000").Int()
+	concurrency = kingpin.Flag("concurrency", "request concurrency").Short('c').Default("10").Int()
+	tn          = kingpin.Flag("tn", "number of tests").Short('n').Default("100").Int()
 	wp          = kingpin.Flag("wp", "wait period, using duration string, default '1m'").Short('p').Default("1m").String()
 )
 

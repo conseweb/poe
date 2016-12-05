@@ -121,7 +121,7 @@ func (k *KafkaCache) Put(raw []byte, waitDuration time.Duration) (*protos.Docume
 		kafkaLogger.Errorf("kafka producer send message return error: %v", err)
 		return nil, err
 	}
-	kafkaLogger.Debugf("%s partition: %d, offset: %d", doc.Id, partition, offset)
+	kafkaLogger.Debugf("<%s, %d, %d>", doc.Id[:8], partition, offset)
 
 	return doc, nil
 }
@@ -138,9 +138,9 @@ func (k *KafkaCache) Get(consumerName, topic string, count int64) ([]*protos.Doc
 	if !ok {
 		return nil, fmt.Errorf("invalid topic %s", topic)
 	}
+	//kafkaLogger.Debugf("%s docschan len: %d", topic, len(docsChan))
 
 	docs := make([]*protos.Document, 0)
-	//kafkaLogger.Debugf("topic %s docs chan len: %d", topic, len(docsChan))
 outer:
 	for {
 		if count <= 0 {
@@ -197,9 +197,12 @@ func (k *KafkaCache) handleConsumer(consumerName string) {
 	if !ok {
 		return
 	}
+
+	kafkaLogger.Infof("handlling consumer %s messages...", consumerName)
 	go func() {
 		for msg := range consumer.Messages() {
-			kafkaLogger.Debugf("consumer %s: %s/%d/%d", consumerName, msg.Topic, msg.Partition, msg.Offset)
+			kafkaLogger.Debugf("<%s: %s/%d/%d>", consumerName, msg.Topic, msg.Partition, msg.Offset)
+
 			if _, ok := k.topicConsumersDocsChans[msg.Topic]; !ok {
 				continue
 			}
@@ -264,6 +267,9 @@ func (k *KafkaCache) Close() error {
 	}
 
 	for name, consumer := range k.consumers {
+		if err := consumer.CommitOffsets(); err != nil {
+			kafkaLogger.Errorf("failed to commit offsets: %v", err)
+		}
 		if err := consumer.Close(); err != nil {
 			kafkaLogger.Errorf("failed to shut dowm consumer %s cleanly: %v", name, consumer)
 		}
