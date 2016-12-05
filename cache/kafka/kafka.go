@@ -27,6 +27,7 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/bsm/sarama-cluster"
 	"github.com/conseweb/poe/protos"
+	"github.com/conseweb/poe/tsp"
 	"github.com/conseweb/poe/utils"
 	"github.com/golang/protobuf/proto"
 	"github.com/hyperledger/fabric/flogging"
@@ -100,11 +101,13 @@ func NewKafkaCache() *KafkaCache {
 
 func (k *KafkaCache) Put(raw []byte, waitDuration time.Duration) (*protos.Document, error) {
 	topic := k.Topic(waitDuration)
+	nowTime := tsp.Now()
+
 	doc := &protos.Document{
-		Id:           k.DocumentID(raw),
+		Id:           k.DocumentID(raw, nowTime),
 		Raw:          raw,
 		Hash:         k.DocumentHash(raw),
-		SubmitTime:   time.Now().UTC().Unix(),
+		SubmitTime:   nowTime.UnixNano(),
 		WaitDuration: int64(waitDuration),
 	}
 	docBytes, err := proto.Marshal(doc)
@@ -253,8 +256,8 @@ func (k *KafkaCache) Topic(d time.Duration) string {
 	return fmt.Sprintf("kafka_%s", d.String())
 }
 
-func (k *KafkaCache) DocumentID(rawData []byte) string {
-	return utils.DocumentID(rawData)
+func (k *KafkaCache) DocumentID(rawData []byte, t time.Time) string {
+	return utils.DocumentID(rawData, t)
 }
 
 func (k *KafkaCache) DocumentHash(raw []byte) string {
