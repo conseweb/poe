@@ -20,11 +20,11 @@ import (
 	"fmt"
 
 	"github.com/conseweb/poe/protos"
+	"github.com/conseweb/poe/tsp"
 	"github.com/gocql/gocql"
 	"github.com/hyperledger/fabric/flogging"
 	"github.com/op/go-logging"
 	"github.com/spf13/viper"
-	"github.com/conseweb/poe/tsp"
 )
 
 var (
@@ -109,7 +109,7 @@ func (c *CassandraPersister) SetDocsBlockDigest(docIDs []string, digest string) 
 		return nil
 	}
 
-	nowTimestamp := tsp.Time().UnixNano()
+	nowTimestamp := tsp.Now().UnixNano()
 	for _, docID := range docIDs {
 		if err := c.session.Query("UPDATE documents SET blockDigest = ?, proofTime = ? WHERE id = ?", digest, nowTimestamp, docID).Exec(); err != nil {
 			cassandraLogger.Warningf("set documents blockDigest return error: %v", err)

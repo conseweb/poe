@@ -20,18 +20,19 @@ import "time"
 
 type TSPService interface {
 	// Time gets current time of tsp server
-	Time() time.Time
+	Now() time.Time
 }
 
 // Time returns current time
-func Time() time.Time {
-	return std.Time()
+func Now() time.Time {
+	return std.Now()
 }
 
 var std = &LocalTSP{}
 
 type LocalTSP struct {
 }
-func (l *LocalTSP) Time() time.Time {
+
+func (l *LocalTSP) Now() time.Time {
 	return time.Now()
 }

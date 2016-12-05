@@ -27,12 +27,12 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/bsm/sarama-cluster"
 	"github.com/conseweb/poe/protos"
+	"github.com/conseweb/poe/tsp"
 	"github.com/conseweb/poe/utils"
 	"github.com/golang/protobuf/proto"
 	"github.com/hyperledger/fabric/flogging"
 	"github.com/op/go-logging"
 	"github.com/spf13/viper"
-	"github.com/conseweb/poe/tsp"
 )
 
 var (
@@ -101,7 +101,7 @@ func NewKafkaCache() *KafkaCache {
 
 func (k *KafkaCache) Put(raw []byte, waitDuration time.Duration) (*protos.Document, error) {
 	topic := k.Topic(waitDuration)
-	nowTime := tsp.Time()
+	nowTime := tsp.Now()
 
 	doc := &protos.Document{
 		Id:           k.DocumentID(raw, nowTime),
