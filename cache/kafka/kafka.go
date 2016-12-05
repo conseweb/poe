@@ -99,16 +99,17 @@ func NewKafkaCache() *KafkaCache {
 	return cache
 }
 
-func (k *KafkaCache) Put(raw []byte, waitDuration time.Duration) (*protos.Document, error) {
+func (k *KafkaCache) Put(raw []byte, metadata string, waitDuration time.Duration) (*protos.Document, error) {
 	topic := k.Topic(waitDuration)
 	nowTime := tsp.Now()
 
 	doc := &protos.Document{
-		Id:           k.DocumentID(raw, nowTime),
-		Raw:          raw,
+		Id: k.DocumentID(raw, nowTime),
+		//Raw:          raw,
 		Hash:         k.DocumentHash(raw),
 		SubmitTime:   nowTime.UnixNano(),
 		WaitDuration: int64(waitDuration),
+		Metadata:     metadata,
 	}
 	docBytes, err := proto.Marshal(doc)
 	if err != nil {
@@ -130,12 +131,6 @@ func (k *KafkaCache) Put(raw []byte, waitDuration time.Duration) (*protos.Docume
 }
 
 func (k *KafkaCache) Get(consumerName, topic string, count int64) ([]*protos.Document, error) {
-	if _, ok := k.consumers[consumerName]; !ok {
-		if !k.Subscribe(consumerName, topic) {
-			return nil, fmt.Errorf("%s unable to subscribe topic %s", consumerName, topic)
-		}
-	}
-
 	k.constructTopicConsumerDocsChan(topic, consumerName)
 	docsChan, ok := k.topicConsumersDocsChans[topic][consumerName]
 	if !ok {
@@ -188,11 +183,9 @@ func (k *KafkaCache) Subscribe(consumerName, topic string) bool {
 		}
 		k.consumers[consumerName] = c
 		go k.handleConsumer(consumerName)
-
-		return true
 	}
 
-	return false
+	return true
 }
 
 func (k *KafkaCache) handleConsumer(consumerName string) {

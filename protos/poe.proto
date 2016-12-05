@@ -7,7 +7,7 @@ message Document {
     // unique id
     string id = 1;
     // raw data
-    bytes raw = 2;
+    //bytes raw = 2;
     // hash(block)
     string blockDigest = 3;
     // submit time
@@ -18,4 +18,8 @@ message Document {
     string hash = 6;
     // wait time
     int64 waitDuration = 7;
+    // metadata
+    string metadata = 8;
+    //
+    string txid = 9;
 }

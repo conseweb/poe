@@ -113,7 +113,7 @@ func (bc *Blockchain) formatDocs(docs []*protos.Document) string {
 
 	ds := make([]string, len(docs))
 	for idx, doc := range docs {
-		ds[idx] = doc.Id
+		ds[idx] = fmt.Sprintf("%s%d%d%s", doc.Id, doc.SubmitTime, doc.WaitDuration, doc.Metadata)
 	}
 	sort.Strings(ds)
 
@@ -188,7 +188,10 @@ func (bc *Blockchain) continueProof() {
 	// cache customer subscribe cache topic
 	periodLimits := utils.GetPeriodLimits()
 	for _, period := range periodLimits {
-		bc.cacher.Subscribe(bc.name, bc.cacher.Topic(period.Period))
+		topic := bc.cacher.Topic(period.Period)
+		if !bc.cacher.Subscribe(bc.name, topic) {
+			blockchainLogger.Fatalf("can't subscribe cache topic %s", topic)
+		}
 		go func(period *utils.PeriodLimit) {
 			ticker := time.NewTicker(period.Period)
 			for {

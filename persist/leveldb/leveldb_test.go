@@ -52,7 +52,7 @@ func (t *LeveldbPersisterTest) Test(c *check.C) {
 	}
 
 	c.Check(ldbp.PutDocsIntoDB(docs), check.IsNil)
-	c.Check(ldbp.SetDocsBlockDigest([]string{"id_1", "id_2"}, "digest"), check.IsNil)
+	c.Check(ldbp.SetDocsBlockDigest([]string{"id_1", "id_2"}, "digest", "txid"), check.IsNil)
 	doc, err := ldbp.GetDocFromDBByDocID("id_1")
 	c.Check(err, check.IsNil)
 	c.Check(doc.Hash, check.DeepEquals, "hash_1")
