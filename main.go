@@ -23,6 +23,7 @@ import (
 	"github.com/conseweb/poe/blockchain"
 	"github.com/conseweb/poe/cache"
 	"github.com/conseweb/poe/persist"
+	"github.com/conseweb/poe/version"
 	"github.com/hyperledger/fabric/flogging"
 	"github.com/op/go-logging"
 )
@@ -38,6 +39,7 @@ func init() {
 func main() {
 	// set logging level
 	flogging.LoggingInit("main")
+	mainLogger.Noticef("Version: %s", version.GetCompleteVersion())
 
 	// cache
 	cc := cache.NewCache()

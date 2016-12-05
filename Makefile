@@ -1,3 +1,4 @@
+APP := poe
 PWD := $(shell pwd)
 PKG := github.com/conseweb/poe
 
@@ -5,10 +6,11 @@ VERSION := $(shell cat VERSION.txt)
 GIT_COMMIT := $(shell git rev-parse --short HEAD)
 GIT_BRANCH := $(shell git rev-parse --abbrev-ref HEAD)
 
-APP := poe
 IMAGE := conseweb/poe:$(GIT_BRANCH)
 INNER_GOPATH := /opt/gopath
 DEV_IMAGE := ckeyer/obc:dev
+
+LD_FLAGS := -X $(PKG)/version.version=$(VERSION) -X $(PKG)/version.gitCommit=$(GIT_COMMIT) -w
 
 test: 
 	docker run --rm \
@@ -18,13 +20,10 @@ test:
 	 $(DEV_IMAGE) make unit-test
 
 unit-test: 
-	go test $$(go list ./... |grep -v "vendor") 
+	go test -ldflags="$(LD_FLAGS)" $$(go list ./... |grep -v "vendor"|grep -v "integration-tests") 
 
 integration-test:
 	echo "todo..."
-
-testInner: 
-	go test $$(go list ./... |grep -v "vendor"|grep -v "integration-tests")
 
 image: build build-image
 
@@ -40,7 +39,7 @@ build-image:
 	docker build -t $(IMAGE) -f Dockerfile.run .
 
 local:
-	go build -o bundles/$(APP) .
+	go build -ldflags="$(LD_FLAGS)" -o bundles/$(APP) .
 
 dev:
 	docker run --rm \
