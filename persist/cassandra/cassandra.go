@@ -72,7 +72,14 @@ func NewCassandraPersister() *CassandraPersister {
 
 func (c *CassandraPersister) PutDocsIntoDB(docs []*protos.Document) error {
 	for _, doc := range docs {
-		if err := c.session.Query(`INSERT INTO documents(id, hash, submitTime, waitDuration, metadata) VALUES(?, ?, ?, ?, ?)`, doc.Id, doc.Hash, doc.SubmitTime, doc.WaitDuration, doc.Metadata).Exec(); err != nil {
+		if err := c.session.Query(
+			`INSERT INTO documents(id, hash, submitTime, waitDuration, metadata) VALUES(?, ?, ?, ?, ?)`,
+			doc.Id,
+			doc.Hash,
+			doc.SubmitTime,
+			doc.WaitDuration,
+			doc.Metadata,
+		).Exec(); err != nil {
 			cassandraLogger.Warningf("put doc[%s] into DB return error: %v", doc.Id, err)
 		}
 	}
@@ -86,7 +93,20 @@ func (c *CassandraPersister) GetDocFromDBByDocID(docID string) (*protos.Document
 	}
 
 	doc := &protos.Document{}
-	if err := c.session.Query(`SELECT id, hash, blockDigest, submitTime, proofTime, waitDuration, metadata, transactionId FROM documents WHERE id = ? LIMIT 1`, docID).Consistency(gocql.One).Scan(&doc.Id, &doc.Hash, &doc.BlockDigest, &doc.SubmitTime, &doc.ProofTime, &doc.WaitDuration, &doc.Metadata, &doc.Txid); err != nil {
+	if err := c.session.Query(
+		"SELECT id, hash, blockDigest, submitTime, proofTime, waitDuration, metadata, transactionId "+
+			"FROM documents WHERE id = ? LIMIT 1",
+		docID,
+	).Consistency(gocql.One).Scan(
+		&doc.Id,
+		&doc.Hash,
+		&doc.BlockDigest,
+		&doc.SubmitTime,
+		&doc.ProofTime,
+		&doc.WaitDuration,
+		&doc.Metadata,
+		&doc.Txid,
+	); err != nil {
 		cassandraLogger.Warningf("get document[%s] from Db return error: %v", docID, err)
 		return nil, err
 	}
@@ -102,7 +122,13 @@ func (c *CassandraPersister) SetDocsBlockDigest(docIDs []string, digest, txid st
 
 	nowTimestamp := tsp.Now().UnixNano()
 	for _, docID := range docIDs {
-		if err := c.session.Query("UPDATE documents SET blockDigest = ?, proofTime = ?, transactionId = ? WHERE id = ?", digest, nowTimestamp, txid, docID).Exec(); err != nil {
+		if err := c.session.Query(
+			"UPDATE documents SET blockDigest = ?, proofTime = ?, transactionId = ? WHERE id = ?",
+			digest,
+			nowTimestamp,
+			txid,
+			docID,
+		).Exec(); err != nil {
 			cassandraLogger.Warningf("set documents blockDigest return error: %v", err)
 			return err
 		}
@@ -116,7 +142,11 @@ func (c *CassandraPersister) FindDocsByBlockDigest(digest string) ([]*protos.Doc
 		return nil, fmt.Errorf("invalid digest")
 	}
 
-	iter := c.session.Query("SELECT id, hash, blockDigest, submitTime, proofTime, waitDuration, metadata, transactionId FROM documents WHERE blockDigest = ?", digest).Iter()
+	iter := c.session.Query(
+		"SELECT id, hash, blockDigest, submitTime, proofTime, waitDuration, metadata, transactionId "+
+			"FROM documents WHERE blockDigest = ?",
+		digest,
+	).Iter()
 
 	return iterToDocs(iter)
 }
@@ -126,7 +156,11 @@ func (c *CassandraPersister) FindDocsByHash(hash string) ([]*protos.Document, er
 		return nil, fmt.Errorf("invalid hash")
 	}
 
-	iter := c.session.Query("SELECT id, hash, blockDigest, submitTime, proofTime, waitDuration, metadata, transactionId FROM documents WHERE hash = ?", hash).Iter()
+	iter := c.session.Query(
+		"SELECT id, hash, blockDigest, submitTime, proofTime, waitDuration, metadata, transactionId "+
+			"FROM documents WHERE hash = ?",
+		hash,
+	).Iter()
 
 	return iterToDocs(iter)
 }
@@ -136,7 +170,13 @@ func (c *CassandraPersister) FindRegisteredDocs(count int) ([]*protos.Document, 
 		return nil, fmt.Errorf("invalid param: count %d", count)
 	}
 
-	iter := c.session.Query("SELECT id, hash, blockDigest, submitTime, proofTime, waitDuration, metadata, transactionId FROM documents WHERE blockDigest = ? and proofTime = ? LIMIT ?", "", "", count).Iter()
+	iter := c.session.Query(
+		"SELECT id, hash, blockDigest, submitTime, proofTime, waitDuration, metadata, transactionId "+
+			"FROM documents WHERE blockDigest = ? and proofTime = ? LIMIT ?",
+		"",
+		"",
+		count,
+	).Iter()
 
 	return iterToDocs(iter)
 }
@@ -146,7 +186,13 @@ func (c *CassandraPersister) FindProofedDocs(count int) ([]*protos.Document, err
 		return nil, fmt.Errorf("invalid param: count: %d", count)
 	}
 
-	iter := c.session.Query("SELECT id, hash, blockDigest, submitTime, proofTime, waitDuration, metadata, transactionId FROM documents WHERE blockDigest != ? and proofTime != ? LIMIT ?", "", "", count).Iter()
+	iter := c.session.Query(
+		"SELECT id, hash, blockDigest, submitTime, proofTime, waitDuration, metadata, transactionId "+
+			"FROM documents WHERE blockDigest != ? and proofTime != ? LIMIT ?",
+		"",
+		"",
+		count,
+	).Iter()
 
 	return iterToDocs(iter)
 }
@@ -160,7 +206,16 @@ func iterToDocs(iter *gocql.Iter) ([]*protos.Document, error) {
 	docs := make([]*protos.Document, 0)
 	for {
 		doc := &protos.Document{}
-		if !iter.Scan(&doc.Id, &doc.Hash, &doc.BlockDigest, &doc.SubmitTime, &doc.ProofTime, &doc.WaitDuration, &doc.Metadata, &doc.Txid) {
+		if !iter.Scan(
+			&doc.Id,
+			&doc.Hash,
+			&doc.BlockDigest,
+			&doc.SubmitTime,
+			&doc.ProofTime,
+			&doc.WaitDuration,
+			&doc.Metadata,
+			&doc.Txid,
+		) {
 			break
 		}
 		docs = append(docs, doc)
