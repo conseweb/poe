@@ -46,11 +46,11 @@ func (t *FakePersisterTest) TestPutDocsIntoDB(c *check.C) {
 	docs := []*protos.Document{
 		&protos.Document{
 			Id:  "3de292f2deda3a152270d54f08748d4bd8a106c6c45e8314cecd0769302785d54afe92efe560be7e2ffafc2c0f7c0b902b4b502e870a461090843432a9641ec0",
-			Raw: []byte("dflsjfoiwefjlasfffdfjjfggjhjhggadjfoiewffjkhkjalsdjfoiewasjdfjewoiosdjff"),
+			//Raw: []byte("dflsjfoiwefjlasfffdfjjfggjhjhggadjfoiewffjkhkjalsdjfoiewasjdfjewoiosdjff"),
 		},
 		&protos.Document{
 			Id:  "e568851e15a09b5e80f0caa11dda549ce0f5e56f0ddca530857ba94e483283423d403e7110c1eff6716d6db01d71813b469a0fd870d7d524a131cd6c40a30d9b",
-			Raw: []byte("dflsjfoiwefjlasfffdfjjfggjhjhggdsdfadjfoiewffjkhkjalsdjfoiewasjdfjewoiosdjff"),
+			//Raw: []byte("dflsjfoiwefjlasfffdfjjfggjhjhggdsdfadjfoiewffjkhkjalsdjfoiewasjdfjewoiosdjff"),
 		},
 	}
 
@@ -69,11 +69,11 @@ func (t *FakePersisterTest) TestGetDocFromDBByDocID(c *check.C) {
 	docs := []*protos.Document{
 		&protos.Document{
 			Id:  "3de292f2deda3a152270d54f08748d4bd8a106c6c45e8314cecd0769302785d54afe92efe560be7e2ffafc2c0f7c0b902b4b502e870a461090843432a9641ec0",
-			Raw: []byte("dflsjfoiwefjlasfffdfjjfggjhjhggadjfoiewffjkhkjalsdjfoiewasjdfjewoiosdjff"),
+			//Raw: []byte("dflsjfoiwefjlasfffdfjjfggjhjhggadjfoiewffjkhkjalsdjfoiewasjdfjewoiosdjff"),
 		},
 		&protos.Document{
 			Id:  "e568851e15a09b5e80f0caa11dda549ce0f5e56f0ddca530857ba94e483283423d403e7110c1eff6716d6db01d71813b469a0fd870d7d524a131cd6c40a30d9b",
-			Raw: []byte("dflsjfoiwefjlasfffdfjjfggjhjhggdsdfadjfoiewffjkhkjalsdjfoiewasjdfjewoiosdjff"),
+			//Raw: []byte("dflsjfoiwefjlasfffdfjjfggjhjhggdsdfadjfoiewffjkhkjalsdjfoiewasjdfjewoiosdjff"),
 		},
 	}
 
@@ -84,7 +84,7 @@ func (t *FakePersisterTest) TestGetDocFromDBByDocID(c *check.C) {
 	c.Check(err, check.IsNil)
 	c.Check(doc, check.NotNil)
 	c.Check(doc.Id, check.Equals, "e568851e15a09b5e80f0caa11dda549ce0f5e56f0ddca530857ba94e483283423d403e7110c1eff6716d6db01d71813b469a0fd870d7d524a131cd6c40a30d9b")
-	c.Check(string(doc.Raw), check.Equals, "dflsjfoiwefjlasfffdfjjfggjhjhggdsdfadjfoiewffjkhkjalsdjfoiewasjdfjewoiosdjff")
+	//c.Check(string(doc.Raw), check.Equals, "dflsjfoiwefjlasfffdfjjfggjhjhggdsdfadjfoiewffjkhkjalsdjfoiewasjdfjewoiosdjff")
 
 	p.Close()
 }
@@ -95,18 +95,18 @@ func (t *FakePersisterTest) TestSetFindDocsBlockDigest(c *check.C) {
 	docs := []*protos.Document{
 		&protos.Document{
 			Id:  "3de292f2deda3a152270d54f08748d4bd8a106c6c45e8314cecd0769302785d54afe92efe560be7e2ffafc2c0f7c0b902b4b502e870a461090843432a9641ec0",
-			Raw: []byte("dflsjfoiwefjlasfffdfjjfggjhjhggadjfoiewffjkhkjalsdjfoiewasjdfjewoiosdjff"),
+			//Raw: []byte("dflsjfoiwefjlasfffdfjjfggjhjhggadjfoiewffjkhkjalsdjfoiewasjdfjewoiosdjff"),
 		},
 		&protos.Document{
 			Id:  "e568851e15a09b5e80f0caa11dda549ce0f5e56f0ddca530857ba94e483283423d403e7110c1eff6716d6db01d71813b469a0fd870d7d524a131cd6c40a30d9b",
-			Raw: []byte("dflsjfoiwefjlasfffdfjjfggjhjhggdsdfadjfoiewffjkhkjalsdjfoiewasjdfjewoiosdjff"),
+			//Raw: []byte("dflsjfoiwefjlasfffdfjjfggjhjhggdsdfadjfoiewffjkhkjalsdjfoiewasjdfjewoiosdjff"),
 		},
 	}
 
 	c.Check(p.PutDocsIntoDB(docs), check.IsNil)
 	c.Check(len(p.documents), check.Equals, 2)
 
-	p.SetDocsBlockDigest([]string{"3de292f2deda3a152270d54f08748d4bd8a106c6c45e8314cecd0769302785d54afe92efe560be7e2ffafc2c0f7c0b902b4b502e870a461090843432a9641ec0", "e568851e15a09b5e80f0caa11dda549ce0f5e56f0ddca530857ba94e483283423d403e7110c1eff6716d6db01d71813b469a0fd870d7d524a131cd6c40a30d9b"}, "dddddddddddddd")
+	p.SetDocsBlockDigest([]string{"3de292f2deda3a152270d54f08748d4bd8a106c6c45e8314cecd0769302785d54afe92efe560be7e2ffafc2c0f7c0b902b4b502e870a461090843432a9641ec0", "e568851e15a09b5e80f0caa11dda549ce0f5e56f0ddca530857ba94e483283423d403e7110c1eff6716d6db01d71813b469a0fd870d7d524a131cd6c40a30d9b"}, "dddddddddddddd", "txid")
 
 	docs, err := p.FindDocsByBlockDigest("dddddddddddddd")
 	c.Check(err, check.IsNil)

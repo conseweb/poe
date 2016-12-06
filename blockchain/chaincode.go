@@ -240,12 +240,13 @@ func (bc *Blockchain) getGrpcConn(addr string) (*grpc.ClientConn, error) {
 // invoke_completed 事件响应处理
 func invokeCompleted(sender *Blockchain, e *fabricpb.Event_ChaincodeEvent) error {
 	blockchainLogger.Debugf("blockchain event: %v", e)
-	obj := sender.items.Get(e.ChaincodeEvent.TxID)
+	txid := e.ChaincodeEvent.TxID
+	obj := sender.items.Get(txid)
 	if obj == nil {
-		blockchainLogger.Warningf("txID %s has no documents stored", e.ChaincodeEvent.TxID)
+		blockchainLogger.Warningf("txID %s has no documents stored", txid)
 		return fmt.Errorf("not found stored documents")
 	}
-	blockchainLogger.Debugf("txID: %s, docs: %v", e.ChaincodeEvent.TxID, obj)
+	blockchainLogger.Debugf("txID: %s, docs: %v", txid, obj)
 	docs, ok := obj.([]*poepb.Document)
 	if !ok {
 		return fmt.Errorf("invalid stored type, should be a slice of documents pointer")
@@ -269,7 +270,7 @@ func invokeCompleted(sender *Blockchain, e *fabricpb.Event_ChaincodeEvent) error
 	}
 
 	blockchainLogger.Debugf("proofKey: %s, docIds: %v", proofKey, docIds)
-	sender.persister.SetDocsBlockDigest(docIds, proofKey)
-	sender.items.Delete(e.ChaincodeEvent.TxID)
+	sender.persister.SetDocsBlockDigest(docIds, proofKey, txid)
+	sender.items.Delete(txid)
 	return nil
 }

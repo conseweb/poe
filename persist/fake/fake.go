@@ -68,7 +68,7 @@ func (p *FakePersister) GetDocFromDBByDocID(docID string) (*protos.Document, err
 	return doc, nil
 }
 
-func (p *FakePersister) SetDocsBlockDigest(docIDs []string, digest string) error {
+func (p *FakePersister) SetDocsBlockDigest(docIDs []string, digest, txid string) error {
 	p.Lock()
 	defer p.Unlock()
 

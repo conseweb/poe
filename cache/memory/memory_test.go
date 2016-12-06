@@ -18,9 +18,10 @@ package memory
 
 import (
 	"fmt"
-	"gopkg.in/check.v1"
 	"testing"
 	"time"
+
+	"gopkg.in/check.v1"
 )
 
 func TestAll(t *testing.T) {
@@ -36,8 +37,8 @@ func (t *MemoryCacheTest) TestPut(c *check.C) {
 	cache := NewMemoryCache()
 	defer cache.Close()
 
-	cache.Put([]byte("raw"), time.Minute)
-	cache.Put([]byte("raw1"), time.Minute)
+	cache.Put([]byte("raw"), "", time.Minute)
+	cache.Put([]byte("raw1"), "", time.Minute)
 
 	c.Check(len(cache.vals), check.Equals, 1)
 	c.Check(len(cache.vals[cache.Topic(time.Minute)]), check.Equals, 2)
@@ -45,8 +46,8 @@ func (t *MemoryCacheTest) TestPut(c *check.C) {
 
 func (t *MemoryCacheTest) TestClose(c *check.C) {
 	cache := NewMemoryCache()
-	cache.Put([]byte("raw"), time.Minute)
-	cache.Put([]byte("raw1"), time.Minute)
+	cache.Put([]byte("raw"), "", time.Minute)
+	cache.Put([]byte("raw1"), "", time.Minute)
 
 	cache.Close()
 
@@ -59,6 +60,6 @@ func (t *MemoryCacheTest) BenchmarkPut(c *check.C) {
 	defer cache.Close()
 
 	for i := 0; i < c.N; i++ {
-		cache.Put([]byte(fmt.Sprintf("raw%d", i)), time.Minute)
+		cache.Put([]byte(fmt.Sprintf("raw%d", i)), "", time.Minute)
 	}
 }

@@ -29,6 +29,7 @@ import (
 type DocumentSubmitRequest struct {
 	ProofWaitPeriod string `json:"proofWaitPeriod" xml:"proofWaitPeriod" form:"proofWaitPeriod"`
 	RawDocument     string `json:"rawDocument" xml:"rawDocument" form:"rawDocument"`
+	Metadata        string `json:"metadata" xml:"metadata" form:"metadata"`
 }
 
 // DocumentSubmitResponse
@@ -57,7 +58,7 @@ func (srv *APIServer) submitRaw(ctx *iris.Context) {
 	}
 
 	apiLogger.Debugf("receive<%s, %s>", req.RawDocument, waitPeriod.String())
-	doc, err := srv.cache.Put([]byte(req.RawDocument), waitPeriod)
+	doc, err := srv.cache.Put([]byte(req.RawDocument), req.Metadata, waitPeriod)
 	if err != nil {
 		apiLogger.Errorf("put sumit document into cache return error: %v", err)
 		ctx.Error("poe server can't provider service now, sorry", iris.StatusInternalServerError)
