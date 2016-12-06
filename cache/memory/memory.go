@@ -45,7 +45,7 @@ func NewMemoryCache() *MemoryCache {
 }
 
 // put value into cache
-func (m *MemoryCache) Put(raw []byte, waitDuration time.Duration) (*protos.Document, error) {
+func (m *MemoryCache) Put(raw []byte, metadata string, waitDuration time.Duration) (*protos.Document, error) {
 	m.Lock()
 	defer m.Unlock()
 
@@ -57,11 +57,12 @@ func (m *MemoryCache) Put(raw []byte, waitDuration time.Duration) (*protos.Docum
 
 	nowTime := tsp.Now()
 	doc := &protos.Document{
-		Id:           m.DocumentID(raw, nowTime),
-		Raw:          raw,
+		Id: m.DocumentID(raw, nowTime),
+		//Raw:          raw,
 		Hash:         m.DocumentHash(raw),
 		SubmitTime:   nowTime.UnixNano(),
 		WaitDuration: int64(waitDuration),
+		Metadata:     metadata,
 	}
 	m.vals[topic][doc.Id] = doc
 

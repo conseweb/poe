@@ -116,7 +116,7 @@ func (l *LevelDBPersister) GetDocFromDBByDocID(docID string) (*protos.Document, 
 	return doc, nil
 }
 
-func (l *LevelDBPersister) SetDocsBlockDigest(docIDs []string, digest string) error {
+func (l *LevelDBPersister) SetDocsBlockDigest(docIDs []string, digest, txid string) error {
 	if len(docIDs) == 0 || digest == "" {
 		return fmt.Errorf("invalid params")
 	}

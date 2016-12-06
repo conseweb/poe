@@ -47,7 +47,7 @@ type PersistInterface interface {
 	GetDocFromDBByDocID(docID string) (*protos.Document, error)
 
 	// SetDocsBlockDigest sets documents's blockDigest, which indicate where documents belongs to
-	SetDocsBlockDigest(docIDs []string, digest string) error
+	SetDocsBlockDigest(docIDs []string, digest, txid string) error
 
 	// FindDocsByBlockDigest finds documents belong to a same digest
 	FindDocsByBlockDigest(digest string) ([]*protos.Document, error)
@@ -108,9 +108,11 @@ func continuePersist(cc cache.CacheInterface) {
 		for _, period := range periodLimits {
 			go func(period *utils.PeriodLimit, dc chan<- *protos.Document) {
 				topic := cc.Topic(period.Period)
-				cc.Subscribe(persisterName, topic)
+				if !cc.Subscribe(persisterName, topic) {
+					persistLogger.Fatalf("can't subscribe cache topic %s", topic)
+				}
 
-				persistLogger.Debugf("%s get topic[%s] documents", persisterName, topic)
+				//persistLogger.Debugf("%s get topic[%s] documents", persisterName, topic)
 				docs, err := cc.Get(persisterName, topic, period.Limit)
 				if err != nil {
 					persistLogger.Warningf("get topic %s documents from cache return error: %v", topic, err)
