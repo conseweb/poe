@@ -118,6 +118,7 @@ type GetProofRequest struct {
 
 type GetProofResponse struct {
 	Status           string `json:"status"` // none/wait/valid/invalid
+	Message          string `json:"message,omitempty"`
 	DocumentId       string `json:"documentId,omitempty"`
 	SubmitTime       int64  `json:"submitTime,omitempty"`
 	ProofTime        int64  `json:"proofTime,omitempty"`
@@ -164,6 +165,7 @@ func (srv *APIServer) getProof(ctx *iris.Context) {
 	blockDocs, err := srv.persister.FindDocsByBlockDigest(doc.BlockDigest)
 	if err != nil {
 		response.Status = "invalid"
+		response.Message = err.Error()
 		ctx.JSON(iris.StatusOK, response)
 		return
 	}
