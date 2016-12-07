@@ -155,7 +155,7 @@ func (srv *APIServer) getProof(ctx *iris.Context) {
 		response.DocumentId = doc.Id
 		response.SubmitTime = doc.SubmitTime
 		response.PerdictProofTime = time.Unix(doc.SubmitTime, 0).UTC().Add(time.Duration(doc.WaitDuration)).Unix()
-		ctx.JSON(iris.StatusOK, response)
+		ctx.JSON(iris.StatusAccepted, response)
 		return
 	}
 
@@ -166,18 +166,20 @@ func (srv *APIServer) getProof(ctx *iris.Context) {
 	if err != nil {
 		response.Status = "invalid"
 		response.Message = err.Error()
-		ctx.JSON(iris.StatusOK, response)
+		ctx.JSON(iris.StatusNotFound, response)
 		return
 	}
 	apiLogger.Debugf("using same blockdigest docs: %v", blockDocs)
 
 	// verify by blockchain
-	if srv.blcokchain.VerifyDocs(blockDocs) {
-		response.Status = "valid"
-		response.ProofTime = doc.ProofTime
-	} else {
+	if !srv.blcokchain.VerifyDocs(blockDocs) {
 		response.Status = "invalid"
+		response.Message = "not verified."
+		ctx.JSON(iris.StatusInternalServerError, response)
+		return
 	}
+	response.Status = "valid"
+	response.ProofTime = doc.ProofTime
 
 	ctx.JSON(iris.StatusOK, response)
 }
