@@ -17,10 +17,13 @@ limitations under the License.
 package api
 
 import (
+	"encoding/hex"
+	"encoding/json"
 	"sort"
 	"time"
 
 	"github.com/conseweb/poe/protos"
+	"github.com/conseweb/poe/sign"
 	"github.com/conseweb/poe/utils"
 	"github.com/kataras/iris"
 )
@@ -117,11 +120,13 @@ type GetProofRequest struct {
 }
 
 type GetProofResponse struct {
-	Status           string `json:"status"` // none/wait/valid/invalid
-	DocumentId       string `json:"documentId,omitempty"`
-	SubmitTime       int64  `json:"submitTime,omitempty"`
-	ProofTime        int64  `json:"proofTime,omitempty"`
-	PerdictProofTime int64  `json:"perdictProofTime,omitempty"`
+	Status    string          `json:"status"` // none/wait/valid/invalid
+	PublicKey string          `json:"publicKey,omitempty"`
+	Doc       protos.Document `json:doc,omitempty`
+	//DocumentId       string `json:"documentId,omitempty"`
+	//SubmitTime       int64  `json:"submitTime,omitempty"`
+	//ProofTime        int64  `json:"proofTime,omitempty"`
+	PerdictProofTime int64 `json:"perdictProofTime,omitempty"`
 }
 
 // getProof
@@ -133,7 +138,7 @@ func (srv *APIServer) getProof(ctx *iris.Context) {
 		return
 	}
 
-	response := &GetProofResponse{}
+	response := &GetProofResponse{Doc: protos.Document{}}
 	// document id is made by cache, so always should to get document id though cacher
 	docHash := srv.cache.DocumentHash([]byte(req.RawDocument))
 
@@ -151,15 +156,17 @@ func (srv *APIServer) getProof(ctx *iris.Context) {
 	// if document's blockDigest is blank, means blockchain has not proof exists
 	if doc.BlockDigest == "" {
 		response.Status = "wait"
-		response.DocumentId = doc.Id
-		response.SubmitTime = doc.SubmitTime
+		//response.Doc.DocumentId = doc.Id
+		response.Doc.Id = doc.Id
+		response.Doc.SubmitTime = doc.SubmitTime
 		response.PerdictProofTime = time.Unix(doc.SubmitTime, 0).UTC().Add(time.Duration(doc.WaitDuration)).Unix()
 		ctx.JSON(iris.StatusOK, response)
 		return
 	}
 
-	response.DocumentId = doc.Id
-	response.SubmitTime = doc.SubmitTime
+	//response.Doc.DocumentId = doc.Id
+	response.Doc.Id = doc.Id
+	response.Doc.SubmitTime = doc.SubmitTime
 	// based on document block digest, get all documents in same block
 	blockDocs, err := srv.persister.FindDocsByBlockDigest(doc.BlockDigest)
 	if err != nil {
@@ -171,8 +178,24 @@ func (srv *APIServer) getProof(ctx *iris.Context) {
 
 	// verify by blockchain
 	if srv.blcokchain.VerifyDocs(blockDocs) {
+		response.Doc.ProofTime = doc.ProofTime
+		// Serialization structure to []byte
+		docRaw, err := json.Marshal(response.Doc)
+		if err != nil {
+			response.Status = "invalid"
+			ctx.JSON(iris.StatusOK, response)
+			return
+		}
+		// ecdsa sign
+		signRaw, pukRaw, err := sign.ECDSASign(docRaw)
+		if err != nil {
+			response.Status = "invalid"
+			ctx.JSON(iris.StatusOK, response)
+			return
+		}
+		response.Doc.Sign = hex.EncodeToString(signRaw)
+		response.PublicKey = hex.EncodeToString(pukRaw)
 		response.Status = "valid"
-		response.ProofTime = doc.ProofTime
 	} else {
 		response.Status = "invalid"
 	}
