@@ -20,6 +20,8 @@ message Document {
     int64 waitDuration = 7;
     // metadata
     string metadata = 8;
-    //
+    // txid
     string txid = 9;
+    // sign
+    string sign = 10;
 }
