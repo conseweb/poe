@@ -5,20 +5,23 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/sha512"
+	"crypto/x509"
 	"encoding/asn1"
+	"io/ioutil"
 	"math/big"
 	"strings"
+	"sync"
 
 	"github.com/op/go-logging"
+	"github.com/spf13/viper"
 )
 
 var (
 	signLogger = logging.MustGetLogger("sign")
+	once       sync.Once
 	entropy    string            //影响因子,32 位随机字符
-	uniqueId   string            //密钥唯一标识，224、256、384、521 位随机字符
 	prk        *ecdsa.PrivateKey //私钥
 	puk        *ecdsa.PublicKey  //公钥
-	curve      elliptic.Curve    //椭圆曲线
 )
 
 // Ecdsa 签名
@@ -26,17 +29,36 @@ type ecdsaSignature struct {
 	R, S *big.Int
 }
 
-func init() {
-	var err error
-	curve = elliptic.P521()
+func initKeys() {
+	var (
+		prkRaw []byte
+		pukRaw []byte
+		obj    interface{}
+		err    error
+	)
 	entropy = "RTZun8DdcdAlgKEP1f832fnbL43b5IqT"
-	uniqueId = "r4E43BLX3WsOT4u3OOyjNcncQC1M1R4y27896T95Hwv0522W5M8YLMXSk3I8ItTvP2A2B9Q5Iad7RJU6iFEr3Y1sUb16738VU31l4CtqjLboQ9Gw088j78sIvQh8B1zS9P3uEWwTp829bEzg0x55WSxevVE8EZ6eMH6TspJP3c038h2aI1BoWx2XBSDw4BpN6Jfx8H2IR8HvqCk1jLn2F0wDuV432n5i"
-	prk, err = ecdsa.GenerateKey(curve, strings.NewReader(uniqueId))
+	prkRaw, err = ioutil.ReadFile(viper.GetString("certs.prkFile"))
 	if err != nil {
-		signLogger.Debugf("in ecdsa func <init> GenerateKey error : %v", err)
-		return
+		signLogger.Fatalf("read <certs.prkFile> error: %v", err)
 	}
-	puk = &prk.PublicKey
+	prk, err = x509.ParseECPrivateKey(prkRaw)
+	if err != nil {
+		signLogger.Fatalf("parse <certs.prkFile> error: %v", err)
+	}
+	pukRaw, err = ioutil.ReadFile(viper.GetString("certs.pukFile"))
+	if err != nil {
+		signLogger.Fatalf("read <certs.pukFile> error: %v", err)
+	}
+	obj, err = x509.ParsePKIXPublicKey(pukRaw)
+	if err != nil {
+		signLogger.Fatalf("parse <certs.pukFile> error: %v", err)
+	}
+	if pukIn, ok := obj.(*ecdsa.PublicKey); ok {
+		puk = pukIn
+	}
+	if puk == nil {
+		signLogger.Fatal("parse <certs.pukFile> error: is not vaild.")
+	}
 }
 
 // ecdsa 签名
@@ -46,6 +68,7 @@ func init() {
 // 2.公匙字节数组
 // 3.错误信息
 func ECDSASign(msg []byte) ([]byte, []byte, error) {
+	once.Do(initKeys)
 	hashInstance := sha512.New()
 	hashInstance.Write(msg)
 	hashBytes := bytes.NewBuffer(hashInstance.Sum(nil)).Bytes()

@@ -116,3 +116,8 @@ blockchain:
   events: u5.mj:7053
   regTimeout: 3s
   failOver: 3
+
+certs:
+  prkFile: 
+  pukFile: 
+    
