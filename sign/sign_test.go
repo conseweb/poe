@@ -7,11 +7,26 @@ import (
 	"encoding/asn1"
 	"encoding/json"
 	"math/big"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/conseweb/poe/protos"
+	"github.com/spf13/viper"
 )
+
+func initConfig() error {
+	viper.SetConfigName("poe")
+	viper.SetConfigType("yaml")
+	viper.AddConfigPath("./")
+	gopath := os.Getenv("GOPATH")
+	for _, p := range filepath.SplitList(gopath) {
+		cfgpath := filepath.Join(p, "src", "github.com/conseweb/poe")
+		viper.AddConfigPath(cfgpath)
+	}
+	return viper.ReadInConfig()
+}
 
 func Verify(pukRaw, signRaw, msg []byte) (bool, error) {
 	var (
@@ -34,6 +49,10 @@ func Verify(pukRaw, signRaw, msg []byte) (bool, error) {
 }
 
 func Test_EcdsaSign(t *testing.T) {
+	err := initConfig()
+	if err != nil {
+		t.Errorf("init config error: %v", err)
+	}
 	doc := protos.Document{
 		Id:           "Id",
 		BlockDigest:  "BlockDigest",

@@ -1,6 +1,20 @@
 # 签名
 
-安全性加强： 按照唯一的Key值，生成公私钥， 签名时采用32位的字符为影响因子
+× 先对明文做sha512，然后再签名。
+× 公私钥文件统一为DER编码。
+× 验证需要先对签名字节流做asn.1 逆向解码获取签名信息。
+
+## 生成私钥
+
+openssl ecparam -genkey -name secp521r1 -out prk.pem -text
+
+## 更改私钥编码为DER
+
+openssl ec -outform der -in prk.pem -out prk.der
+
+## 导出公钥,编码为DER
+
+openssl ec -outform der -in prk.pem -pubout -out puk.der
 
 # 验证
 
