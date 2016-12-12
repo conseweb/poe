@@ -16,7 +16,6 @@ conseweb/poe:(本地git branch)
 **注:本地测试通过后再提交pr**
 
 ## API 接口
-平台暂定三个接口,如下:
 
 ### POST /api/v1/documents
 新增一个需要证明存在性的文档
@@ -65,6 +64,7 @@ conseweb/poe:(本地git branch)
 * proofTime: 如果状态是已证明,则显示证明时间
 
 ### POST /api/v1/documents/result
+### GET /api/v1/documents/:id/result
 验证文件的存在性
 
 #### 路径参数
@@ -85,9 +85,16 @@ conseweb/poe:(本地git branch)
     * wait: 等待被证明
     * valid: 已被证明
     * none: 无此结果
-* documentId: 文件证明时分配的ID
-* submitTime: 文件提交时间(UTC 时间戳)
-* proofTime: 文件被证明时间(UTC 时间戳)
+* doc: document对象
+    * id: doc唯一标识
+    * blockDigest: 块文件索引值
+    * submitTime: 请求提交时间
+    * proofTime: 证明时间
+    * hash: 文件hash
+    * waitDuration: 证明等待时间
+    * metadata: 文件描述信息
+    * txid: 区块链交易ID
+    * sign: 证书签名
 * perdictProofTime: 当状态为等待被证明时,预计被证明的时间(UTC 时间戳)
 
 ### GET /api/v1/documents

@@ -85,3 +85,8 @@ func ECDSASign(msg []byte) ([]byte, []byte, error) {
 	pukRaw := elliptic.Marshal(puk.Curve, puk.X, puk.Y)
 	return signRaw, pukRaw, nil
 }
+
+// GetPublicKey gets public key
+func GetPublicKey() []byte {
+	return elliptic.Marshal(puk.Curve, puk.X, puk.Y)
+}

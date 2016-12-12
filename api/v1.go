@@ -123,12 +123,12 @@ type GetProofResponse struct {
 	Status           string           `json:"status"` // none/wait/valid/invalid
 	Message          string           `json:"message,omitempty"`
 	PublicKey        string           `json:"publicKey,omitempty"`
-	Doc              *protos.Document `json:doc,omitempty`
+	Doc              *protos.Document `json:"doc,omitempty"`
 	PerdictProofTime int64            `json:"perdictProofTime,omitempty"`
 }
 
 // getProof
-func (srv *APIServer) getProof(ctx *iris.Context) {
+func (srv *APIServer) postProofResult(ctx *iris.Context) {
 	req := new(GetProofRequest)
 	if err := ctx.ReadJSON(req); err != nil {
 		apiLogger.Errorf("read get proof document return error: %v", err)
@@ -145,6 +145,7 @@ func (srv *APIServer) getProof(ctx *iris.Context) {
 	if err != nil || len(docs) == 0 {
 		apiLogger.Errorf("find document[%s] return error: %v", err)
 		response.Status = "none"
+		response.Message = "not found"
 		ctx.JSON(iris.StatusNotFound, response)
 		return
 	}
@@ -171,7 +172,6 @@ func (srv *APIServer) getProof(ctx *iris.Context) {
 	apiLogger.Debugf("using same blockdigest docs: %v", blockDocs)
 
 	// verify by blockchain
-
 	if !srv.blcokchain.VerifyDocs(blockDocs) {
 		response.Status = "invalid"
 		response.Message = "not verified."
@@ -179,25 +179,104 @@ func (srv *APIServer) getProof(ctx *iris.Context) {
 		return
 	}
 
-	// Serialization structure to []byte
-	docRaw, err := json.Marshal(response.Doc)
-	if err != nil {
-		response.Status = "invalid"
-		ctx.JSON(iris.StatusOK, response)
-		return
+	// sign the document
+	if response.Doc.Sign == "" {
+		sign, pubKey, err := srv.setDocSign(response.Doc)
+		if err != nil {
+			response.Status = "invalid"
+			response.Message = err.Error()
+			ctx.JSON(iris.StatusInternalServerError, response)
+			return
+		}
+
+		response.Doc.Sign = sign
+		response.PublicKey = pubKey
+	} else {
+		response.PublicKey = hex.EncodeToString(sign.GetPublicKey())
 	}
-	// ecdsa sign
-	signRaw, pukRaw, err := sign.ECDSASign(docRaw)
-	if err != nil {
-		response.Status = "invalid"
-		ctx.JSON(iris.StatusOK, response)
-		return
-	}
-	response.Doc.Sign = hex.EncodeToString(signRaw)
-	response.PublicKey = hex.EncodeToString(pukRaw)
 	response.Status = "valid"
 
 	ctx.JSON(iris.StatusOK, response)
+}
+
+func (srv *APIServer) getProofResult(ctx *iris.Context) {
+	docID := ctx.Param("id")
+
+	response := &GetProofResponse{Doc: &protos.Document{}}
+	doc, err := srv.persister.GetDocFromDBByDocID(docID)
+	if err != nil {
+		response.Status = "none"
+		response.Message = err.Error()
+		ctx.JSON(iris.StatusNotFound, response)
+		return
+	}
+
+	response.Doc = doc
+	// if document's blockDigest is blank, means blockchain has not proof exists
+	if response.Doc.BlockDigest == "" {
+		response.Status = "wait"
+
+		response.PerdictProofTime = time.Unix(response.Doc.SubmitTime, 0).UTC().Add(time.Duration(response.Doc.WaitDuration)).Unix()
+		ctx.JSON(iris.StatusAccepted, response)
+		return
+	}
+
+	// based on document block digest, get all documents in same block
+	blockDocs, err := srv.persister.FindDocsByBlockDigest(response.Doc.BlockDigest)
+	if err != nil {
+		response.Status = "invalid"
+		response.Message = err.Error()
+		ctx.JSON(iris.StatusNotFound, response)
+		return
+	}
+	apiLogger.Debugf("using same blockdigest docs: %v", blockDocs)
+
+	// verify by blockchain
+	if !srv.blcokchain.VerifyDocs(blockDocs) {
+		response.Status = "invalid"
+		response.Message = "not verified."
+		ctx.JSON(iris.StatusInternalServerError, response)
+		return
+	}
+
+	// sign the document
+	if response.Doc.Sign == "" {
+		sign, pubKey, err := srv.setDocSign(response.Doc)
+		if err != nil {
+			response.Status = "invalid"
+			response.Message = err.Error()
+			ctx.JSON(iris.StatusInternalServerError, response)
+			return
+		}
+
+		response.Doc.Sign = sign
+		response.PublicKey = pubKey
+	} else {
+		response.PublicKey = hex.EncodeToString(sign.GetPublicKey())
+	}
+	response.Status = "valid"
+
+	ctx.JSON(iris.StatusOK, response)
+}
+
+func (srv *APIServer) setDocSign(doc *protos.Document) (string, string, error) {
+	// Serialization structure to []byte
+	docRaw, err := json.Marshal(doc)
+	if err != nil {
+		return "", "", err
+	}
+
+	// ecdsa sign
+	signRaw, pukRaw, err := sign.ECDSASign(docRaw)
+	if err != nil {
+		return "", "", err
+	}
+	sign := hex.EncodeToString(signRaw)
+	publicKey := hex.EncodeToString(pukRaw)
+
+	go srv.persister.SetDocSignature(doc.Id, sign)
+
+	return sign, publicKey, nil
 }
 
 type GetDocsResponse struct {
