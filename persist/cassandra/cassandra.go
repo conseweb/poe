@@ -41,7 +41,8 @@ CREATE TABLE documents (
 	proofTime bigint,
 	waitDuration bigint,
 	transactionId text,
-	metadata text
+	metadata text,
+	sign text
 );
 
 CREATE INDEX ON poe.documents(hash);
@@ -132,6 +133,23 @@ func (c *CassandraPersister) SetDocsBlockDigest(docIDs []string, digest, txid st
 			cassandraLogger.Warningf("set documents blockDigest return error: %v", err)
 			return err
 		}
+	}
+
+	return nil
+}
+
+func (c *CassandraPersister) SetDocSignature(docID, sign string) error {
+	if docID == "" || sign == "" {
+		return fmt.Errorf("invalid params")
+	}
+
+	if err := c.session.Query(
+		"UPDATE documents SET sign = ? WHERE id = ?",
+		sign,
+		docID,
+	).Exec(); err != nil {
+		cassandraLogger.Warningf("set document sign return error: %v", err)
+		return err
 	}
 
 	return nil

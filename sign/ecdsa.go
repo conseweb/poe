@@ -86,6 +86,11 @@ func ECDSASign(msg []byte) ([]byte, []byte, error) {
 	return signRaw, pukRaw, nil
 }
 
+// GetPublicKey gets public key
+func GetPublicKey() []byte {
+	return elliptic.Marshal(puk.Curve, puk.X, puk.Y)
+}
+
 // ecdsa 验证
 // keyRaw: 公钥字节数组
 // signRaw: 签名信息字节数组

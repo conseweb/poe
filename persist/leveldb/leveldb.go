@@ -136,6 +136,10 @@ func (l *LevelDBPersister) SetDocsBlockDigest(docIDs []string, digest, txid stri
 	return l.db.Put(l.digestDocIDsKey(digest), []byte(strings.Join(docIDs, "/")), nil)
 }
 
+func (l *LevelDBPersister) SetDocSignature(docID, sign string) error {
+	return fmt.Errorf("unsupported operation")
+}
+
 func (l *LevelDBPersister) getDocsByDocIds(docIDs []string) ([]*protos.Document, error) {
 	docs := make([]*protos.Document, len(docIDs))
 	for idx, docID := range docIDs {

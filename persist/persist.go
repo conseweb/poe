@@ -49,6 +49,9 @@ type PersistInterface interface {
 	// SetDocsBlockDigest sets documents's blockDigest, which indicate where documents belongs to
 	SetDocsBlockDigest(docIDs []string, digest, txid string) error
 
+	// SetDocSignature sets document's signature
+	SetDocSignature(docID, sign string) error
+
 	// FindDocsByBlockDigest finds documents belong to a same digest
 	FindDocsByBlockDigest(digest string) ([]*protos.Document, error)
 

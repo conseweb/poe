@@ -86,6 +86,15 @@ func (p *FakePersister) SetDocsBlockDigest(docIDs []string, digest, txid string)
 	return nil
 }
 
+func (p *FakePersister) SetDocSignature(docID, sign string) error {
+	p.Lock()
+	defer p.Unlock()
+
+	p.documents[docID].Sign = sign
+
+	return nil
+}
+
 func (p *FakePersister) FindDocsByBlockDigest(digest string) ([]*protos.Document, error) {
 	p.RLock()
 	defer p.RUnlock()
