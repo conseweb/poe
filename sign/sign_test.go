@@ -1,12 +1,7 @@
 package sign
 
 import (
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/sha512"
-	"encoding/asn1"
 	"encoding/json"
-	"math/big"
 	"os"
 	"path/filepath"
 	"testing"
@@ -26,26 +21,6 @@ func initConfig() error {
 		viper.AddConfigPath(cfgpath)
 	}
 	return viper.ReadInConfig()
-}
-
-func Verify(pukRaw, signRaw, msg []byte) (bool, error) {
-	var (
-		hashInstance = sha512.New()
-		signature    = struct {
-			R, S *big.Int
-		}{}
-		puk = ecdsa.PublicKey{
-			Curve: elliptic.P521(),
-		}
-	)
-	puk.X, puk.Y = elliptic.Unmarshal(puk.Curve, pukRaw)
-	_, err := asn1.Unmarshal(signRaw, &signature)
-	if err != nil {
-		return false, err
-	}
-	hashInstance.Write(msg)
-	hashBytes := hashInstance.Sum(nil)
-	return ecdsa.Verify(&puk, hashBytes, signature.R, signature.S), nil
 }
 
 func Test_EcdsaSign(t *testing.T) {
@@ -77,7 +52,7 @@ func Test_EcdsaSign(t *testing.T) {
 	t.Logf("signRaw hex:%x \n", signRaw)
 	t.Logf("pukRaw hex: %x\n", pukRaw)
 	t.Log("\n -- Verify Start-- \n")
-	ok, err := Verify(pukRaw, signRaw, data)
+	ok, err := ECDSAVerify(pukRaw, signRaw, data)
 	if err != nil {
 		t.Errorf("Verify error: %v", err)
 		return
