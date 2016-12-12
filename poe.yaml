@@ -118,6 +118,6 @@ blockchain:
   failOver: 3
 
 certs:
-  prkFile: 
-  pukFile: 
+  prkFile: prk.der
+  pukFile: puk.der 
     
