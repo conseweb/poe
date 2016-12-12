@@ -62,7 +62,7 @@ func initKeys() {
 }
 
 // ecdsa 签名
-// msg : 明文字节数字
+// msg : 明文字节数组
 // returns
 // 1.签名后的字节数组
 // 2.公匙字节数组
@@ -89,4 +89,27 @@ func ECDSASign(msg []byte) ([]byte, []byte, error) {
 // GetPublicKey gets public key
 func GetPublicKey() []byte {
 	return elliptic.Marshal(puk.Curve, puk.X, puk.Y)
+}
+
+// ecdsa 验证
+// keyRaw: 公钥字节数组
+// signRaw: 签名信息字节数组
+// msg : 明文字节数组
+// returns
+// 1.验证结果，布尔值
+// 2.错误信息
+func ECDSAVerify(keyRaw, signRaw, msg []byte) (bool, error) {
+	hashInstance := sha512.New()
+	signature := ecdsaSignature{}
+	key := ecdsa.PublicKey{
+		Curve: elliptic.P521(),
+	}
+	key.X, key.Y = elliptic.Unmarshal(key.Curve, keyRaw)
+	_, err := asn1.Unmarshal(signRaw, &signature)
+	if err != nil {
+		return false, err
+	}
+	hashInstance.Write(msg)
+	hashBytes := bytes.NewBuffer(hashInstance.Sum(nil)).Bytes()
+	return ecdsa.Verify(&key, hashBytes, signature.R, signature.S), nil
 }
