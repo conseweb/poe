@@ -294,6 +294,12 @@
 			"revisionTime": "2016-10-09T18:06:29Z"
 		},
 		{
+			"checksumSHA1": "AMjHZaynjqQ8pzRPA1a6IBFZ1LI=",
+			"path": "github.com/jinzhu/now",
+			"revision": "d9861969c7a7e84746d341c09020c2ef8a617f8f",
+			"revisionTime": "2016-06-12T09:26:03Z"
+		},
+		{
 			"checksumSHA1": "khL6oKjx81rAZKW+36050b7f5As=",
 			"path": "github.com/jmcvetta/randutil",
 			"revision": "2bb1b664bcff821e02b2a0644cd29c7e824d54f8",

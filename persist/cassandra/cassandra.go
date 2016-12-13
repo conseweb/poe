@@ -18,6 +18,7 @@ package cassandra
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/conseweb/poe/protos"
 	"github.com/conseweb/poe/tsp"
@@ -227,6 +228,38 @@ func (c *CassandraPersister) FindDocs(count int) ([]*protos.Document, error) {
 	).Iter()
 
 	return iterToDocs(iter)
+}
+
+func (c *CassandraPersister) DocProofStat(sTime, eTime time.Time) *protos.ProofStat {
+	startTime := sTime.UnixNano()
+	endTime := eTime.UnixNano()
+
+	stat := &protos.ProofStat{
+		StartTime: startTime,
+		EndTime:   endTime,
+	}
+
+	if err := c.session.Query(
+		"SELECT count(*) FROM documents WHERE submitTime >= ? AND submitTime <= ?",
+		startTime,
+		endTime,
+	).Consistency(gocql.One).Scan(&stat.TotalDocs); err != nil {
+		cassandraLogger.Warningf("count all documents return error: %v", err)
+		return stat
+	}
+
+	if err := c.session.Query(
+		"SELECT count(*) FROM documents WHERE submitTime >= ? AND submitTime <= ? AND blockDigest = ?",
+		startTime,
+		endTime,
+		"",
+	).Consistency(gocql.One).Scan(&stat.WaitDocs); err != nil {
+		cassandraLogger.Warningf("count waitting documents return error: %v", err)
+		return stat
+	}
+	stat.ProofedDocs = stat.TotalDocs - stat.WaitDocs
+
+	return stat
 }
 
 func (c *CassandraPersister) Close() error {

@@ -19,6 +19,7 @@ package leveldb
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/conseweb/poe/protos"
 	"github.com/golang/protobuf/proto"
@@ -187,6 +188,10 @@ func (l *LevelDBPersister) FindProofedDocs(count int) ([]*protos.Document, error
 
 func (l *LevelDBPersister) FindDocs(count int) ([]*protos.Document, error) {
 	return nil, fmt.Errorf("unsupported operation")
+}
+
+func (l *LevelDBPersister) DocProofStat(sTime, eTime time.Time) *protos.ProofStat {
+	return nil
 }
 
 func (l *LevelDBPersister) Close() error {

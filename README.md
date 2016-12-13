@@ -116,7 +116,39 @@ conseweb/poe:(本地git branch)
 #### 返回值(json)
 * docs: 查询的文件列表
 
+### GET /poe/v1/documents/stat
+获取统计信息
 
+#### 路径参数
+无
+
+#### 查询参数
+* startTime: 开始时间戳,精确到毫秒,默认0
+* endTime: 结束时间戳,精确到毫秒,默认0
+
+#### 状态值
+200 400
+
+#### 返回值
+参考protos.ProofStat
+
+### GET /poe/v1/documents/stat/normal
+获取一般统计信息
+
+#### 路径参数
+无
+
+#### 查询参数
+无
+
+#### 状态值
+200
+
+#### 返回值
+* totalStat: 全部时间段统计
+* todayStat: 今日统计
+* weekStat: 本周统计
+* monthStat: 本月统计
 
 ## 模块架构
 
