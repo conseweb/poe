@@ -17,7 +17,7 @@ conseweb/poe:(本地git branch)
 
 ## API 接口
 
-### POST /api/v1/documents
+### POST /poe/v1/documents
 新增一个需要证明存在性的文档
 
 #### 路径参数
@@ -38,7 +38,7 @@ conseweb/poe:(本地git branch)
 * documentId: 文件对应ID,此ID仅用于平台在证明过程中查询文件的证明状态,不可作为文件存在的凭证
 * perdictProofTime: 预计文件能被证明的UTC时间戳
 
-### GET /api/v1/documents/:id/status
+### GET /poe/v1/documents/:id/status
 查询文件存在性证明过程
 
 #### 路径参数
@@ -63,8 +63,8 @@ conseweb/poe:(本地git branch)
 * perdictProofTime: 如果状态是等待中,则显示预计的证明时间
 * proofTime: 如果状态是已证明,则显示证明时间
 
-### POST /api/v1/documents/result
-### GET /api/v1/documents/:id/result
+### POST /poe/v1/documents/result
+### GET /poe/v1/documents/:id/result
 验证文件的存在性
 
 #### 路径参数
@@ -97,7 +97,7 @@ conseweb/poe:(本地git branch)
     * sign: 证书签名
 * perdictProofTime: 当状态为等待被证明时,预计被证明的时间(UTC 时间戳)
 
-### GET /api/v1/documents
+### GET /poe/v1/documents
 获取最近n条文件
 
 #### 路径参数

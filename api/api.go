@@ -54,11 +54,11 @@ func NewAPIServer(cc cache.CacheInterface, persister persist.PersistInterface, b
 
 	// api v1
 	{
-		irisapi.Post("/api/v1/documents", server.submitRaw)
-		irisapi.Post("/api/v1/documents/result", server.postProofResult)
-		irisapi.Get("/api/v1/documents/:id/status", server.getProofStatus)
-		irisapi.Get("/api/v1/documents/:id/result", server.getProofResult)
-		irisapi.Get("/api/v1/documents", server.getDocs)
+		irisapi.Post("/poe/v1/documents", server.submitRaw)
+		irisapi.Post("/poe/v1/documents/result", server.postProofResult)
+		irisapi.Get("/poe/v1/documents/:id/status", server.getProofStatus)
+		irisapi.Get("/poe/v1/documents/:id/result", server.getProofResult)
+		irisapi.Get("/poe/v1/documents", server.getDocs)
 	}
 	server.irisapi = irisapi
 

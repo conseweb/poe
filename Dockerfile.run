@@ -4,6 +4,7 @@ MAINTAINER Chuanjian Wang <me@ckeyer.com>
 
 COPY bundles/poe /usr/local/bin
 COPY poe.yaml /usr/local/bin
+COPY sign/*.der /usr/local/bin/
 
 WORKDIR /usr/local/bin
 
