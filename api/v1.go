@@ -290,6 +290,9 @@ func (srv *APIServer) getDocs(ctx *iris.Context) {
 	if err != nil || count <= 0 {
 		count = 10
 	}
+	if count > 200 {
+		count = 200
+	}
 
 	var docs []*protos.Document
 	switch searchType {
@@ -299,6 +302,9 @@ func (srv *APIServer) getDocs(ctx *iris.Context) {
 	case "proof":
 		docs, err = srv.persister.FindProofedDocs(count)
 		sort.Sort(ProofedDocs(docs))
+	case "":
+		docs, err = srv.persister.FindDocs(count)
+		sort.Sort(RegisteredDocs(docs))
 	default:
 		ctx.Error("not supported doc status type", iris.StatusBadRequest)
 		return

@@ -64,6 +64,9 @@ type PersistInterface interface {
 	// FindProofedDocs
 	FindProofedDocs(count int) ([]*protos.Document, error)
 
+	// FindDocs
+	FindDocs(count int) ([]*protos.Document, error)
+
 	// Close closes persister
 	Close() error
 }

@@ -116,6 +116,10 @@ func (p *FakePersister) FindDocsByHash(hash string) ([]*protos.Document, error) 
 	return nil, nil
 }
 
+func (p *FakePersister) FindDocs(count int) ([]*protos.Document, error) {
+	return nil, nil
+}
+
 func (p *FakePersister) Close() error {
 	return nil
 }
