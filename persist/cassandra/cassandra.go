@@ -206,9 +206,23 @@ func (c *CassandraPersister) FindProofedDocs(count int) ([]*protos.Document, err
 
 	iter := c.session.Query(
 		"SELECT id, hash, blockDigest, submitTime, proofTime, waitDuration, metadata, transactionId "+
-			"FROM documents WHERE blockDigest != ? and proofTime != ? LIMIT ?",
+			"FROM documents WHERE blockDigest > ? and proofTime > ? LIMIT ?",
 		"",
-		"",
+		0,
+		count,
+	).Iter()
+
+	return iterToDocs(iter)
+}
+
+func (c *CassandraPersister) FindDocs(count int) ([]*protos.Document, error) {
+	if count <= 0 {
+		return nil, fmt.Errorf("invalid param: count: %d", count)
+	}
+
+	iter := c.session.Query(
+		"SELECT id, hash, blockDigest, submitTime, proofTime, waitDuration, metadata, transactionId "+
+			"FROM documents LIMIT ?",
 		count,
 	).Iter()
 
