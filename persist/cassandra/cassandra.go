@@ -190,7 +190,7 @@ func (c *CassandraPersister) FindRegisteredDocs(count int) ([]*protos.Document, 
 
 	iter := c.session.Query(
 		"SELECT id, hash, blockDigest, submitTime, proofTime, waitDuration, metadata, transactionId "+
-			"FROM documents WHERE blockDigest = ? and proofTime = ? LIMIT ?",
+			"FROM documents WHERE blockDigest = ? and proofTime = ? LIMIT ? ALLOW FILTERING",
 		"",
 		"",
 		count,
@@ -206,7 +206,7 @@ func (c *CassandraPersister) FindProofedDocs(count int) ([]*protos.Document, err
 
 	iter := c.session.Query(
 		"SELECT id, hash, blockDigest, submitTime, proofTime, waitDuration, metadata, transactionId "+
-			"FROM documents WHERE blockDigest > ? and proofTime > ? LIMIT ?",
+			"FROM documents WHERE blockDigest > ? and proofTime > ? LIMIT ? ALLOW FILTERING",
 		"",
 		0,
 		count,
@@ -222,7 +222,7 @@ func (c *CassandraPersister) FindDocs(count int) ([]*protos.Document, error) {
 
 	iter := c.session.Query(
 		"SELECT id, hash, blockDigest, submitTime, proofTime, waitDuration, metadata, transactionId "+
-			"FROM documents LIMIT ?",
+			"FROM documents LIMIT ? ALLOW FILTERING",
 		count,
 	).Iter()
 
