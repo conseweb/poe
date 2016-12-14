@@ -120,6 +120,10 @@ func (p *FakePersister) FindDocs(count int) ([]*protos.Document, error) {
 	return nil, nil
 }
 
+func (p *FakePersister) DocProofStat(sTime, eTime time.Time) *protos.ProofStat {
+	return nil
+}
+
 func (p *FakePersister) Close() error {
 	return nil
 }

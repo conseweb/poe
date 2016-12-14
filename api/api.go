@@ -59,6 +59,8 @@ func NewAPIServer(cc cache.CacheInterface, persister persist.PersistInterface, b
 		irisapi.Get("/poe/v1/documents/:id/status", server.getProofStatus)
 		irisapi.Get("/poe/v1/documents/:id/result", server.getProofResult)
 		irisapi.Get("/poe/v1/documents", server.getDocs)
+		irisapi.Get("/poe/v1/stat/customize", server.getDocStat)
+		irisapi.Get("/poe/v1/stat/normal", server.getNormalDocStat)
 	}
 	server.irisapi = irisapi
 
