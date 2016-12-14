@@ -35,11 +35,11 @@ import (
 // 3. verify every request's proof result
 const (
 	// api url for document register
-	api_doc_reg = "/api/v1/documents"
+	api_doc_reg = "/poe/v1/documents"
 	// api url for document proof status
-	api_doc_proof_status = "/api/v1/documents/%s/status"
+	api_doc_proof_status = "/poe/v1/documents/%s/status"
 	// api url for proof result check
-	api_doc_proof_result = "/api/v1/documents/result"
+	api_doc_proof_result = "/poe/v1/documents/result"
 )
 
 var (

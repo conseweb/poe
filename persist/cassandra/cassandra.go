@@ -18,6 +18,7 @@ package cassandra
 
 import (
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/conseweb/poe/protos"
@@ -26,7 +27,6 @@ import (
 	"github.com/hyperledger/fabric/flogging"
 	"github.com/op/go-logging"
 	"github.com/spf13/viper"
-	"math"
 )
 
 var (
@@ -53,6 +53,10 @@ CREATE INDEX ON poe.documents(transactionId);
 CREATE INDEX ON poe.documents(submitTime);
 */
 
+const (
+	_default_select_sql = "SELECT id, hash, blockDigest, submitTime, proofTime, waitDuration, metadata, transactionId, sign FROM documents"
+)
+
 type CassandraPersister struct {
 	session *gocql.Session
 }
@@ -75,17 +79,20 @@ func NewCassandraPersister() *CassandraPersister {
 }
 
 func (c *CassandraPersister) PutDocsIntoDB(docs []*protos.Document) error {
+	batch := c.session.NewBatch(gocql.LoggedBatch)
 	for _, doc := range docs {
-		if err := c.session.Query(
+		batch.Query(
 			`INSERT INTO documents(id, hash, submitTime, waitDuration, metadata) VALUES(?, ?, ?, ?, ?)`,
 			doc.Id,
 			doc.Hash,
 			doc.SubmitTime,
 			doc.WaitDuration,
 			doc.Metadata,
-		).Exec(); err != nil {
-			cassandraLogger.Warningf("put doc[%s] into DB return error: %v", doc.Id, err)
-		}
+		)
+	}
+
+	if err := c.session.ExecuteBatch(batch); err != nil {
+		cassandraLogger.Warningf("put docs into DB return error: %v", err)
 	}
 
 	return nil
@@ -98,8 +105,7 @@ func (c *CassandraPersister) GetDocFromDBByDocID(docID string) (*protos.Document
 
 	doc := &protos.Document{}
 	if err := c.session.Query(
-		"SELECT id, hash, blockDigest, submitTime, proofTime, waitDuration, metadata, transactionId "+
-			"FROM documents WHERE id = ? LIMIT 1",
+		fmt.Sprintf("%s WHERE id = ? LIMIT 1", _default_select_sql),
 		docID,
 	).Consistency(gocql.One).Scan(
 		&doc.Id,
@@ -110,6 +116,7 @@ func (c *CassandraPersister) GetDocFromDBByDocID(docID string) (*protos.Document
 		&doc.WaitDuration,
 		&doc.Metadata,
 		&doc.Txid,
+		&doc.Sign,
 	); err != nil {
 		cassandraLogger.Warningf("get document[%s] from Db return error: %v", docID, err)
 		return nil, err
@@ -125,17 +132,19 @@ func (c *CassandraPersister) SetDocsBlockDigest(docIDs []string, digest, txid st
 	}
 
 	nowTimestamp := tsp.Now().UnixNano()
+	batch := c.session.NewBatch(gocql.LoggedBatch)
 	for _, docID := range docIDs {
-		if err := c.session.Query(
+		batch.Query(
 			"UPDATE documents SET blockDigest = ?, proofTime = ?, transactionId = ? WHERE id = ?",
 			digest,
 			nowTimestamp,
 			txid,
 			docID,
-		).Exec(); err != nil {
-			cassandraLogger.Warningf("set documents blockDigest return error: %v", err)
-			return err
-		}
+		)
+	}
+	if err := c.session.ExecuteBatch(batch); err != nil {
+		cassandraLogger.Warningf("set documents blockDigest return error: %v", err)
+		return err
 	}
 
 	return nil
@@ -164,8 +173,7 @@ func (c *CassandraPersister) FindDocsByBlockDigest(digest string) ([]*protos.Doc
 	}
 
 	iter := c.session.Query(
-		"SELECT id, hash, blockDigest, submitTime, proofTime, waitDuration, metadata, transactionId "+
-			"FROM documents WHERE blockDigest = ?",
+		fmt.Sprintf("%s WHERE blockDigest = ?", _default_select_sql),
 		digest,
 	).Iter()
 
@@ -178,8 +186,7 @@ func (c *CassandraPersister) FindDocsByHash(hash string) ([]*protos.Document, er
 	}
 
 	iter := c.session.Query(
-		"SELECT id, hash, blockDigest, submitTime, proofTime, waitDuration, metadata, transactionId "+
-			"FROM documents WHERE hash = ?",
+		fmt.Sprintf("%s WHERE hash = ?", _default_select_sql),
 		hash,
 	).Iter()
 
@@ -192,10 +199,9 @@ func (c *CassandraPersister) FindRegisteredDocs(count int) ([]*protos.Document, 
 	}
 
 	iter := c.session.Query(
-		"SELECT id, hash, blockDigest, submitTime, proofTime, waitDuration, metadata, transactionId "+
-			"FROM documents WHERE blockDigest = ? and proofTime = ? LIMIT ? ALLOW FILTERING",
+		fmt.Sprintf("%s WHERE blockDigest = ? and proofTime = ? LIMIT ? ALLOW FILTERING", _default_select_sql),
 		"",
-		"",
+		0,
 		count,
 	).Iter()
 
@@ -208,8 +214,7 @@ func (c *CassandraPersister) FindProofedDocs(count int) ([]*protos.Document, err
 	}
 
 	iter := c.session.Query(
-		"SELECT id, hash, blockDigest, submitTime, proofTime, waitDuration, metadata, transactionId "+
-			"FROM documents WHERE blockDigest > ? and proofTime > ? LIMIT ? ALLOW FILTERING",
+		fmt.Sprintf("%s WHERE blockDigest > ? and proofTime > ? LIMIT ? ALLOW FILTERING", _default_select_sql),
 		"",
 		0,
 		count,
@@ -224,8 +229,7 @@ func (c *CassandraPersister) FindDocs(count int) ([]*protos.Document, error) {
 	}
 
 	iter := c.session.Query(
-		"SELECT id, hash, blockDigest, submitTime, proofTime, waitDuration, metadata, transactionId "+
-			"FROM documents LIMIT ? ALLOW FILTERING",
+		fmt.Sprintf("%s LIMIT ? ALLOW FILTERING", _default_select_sql),
 		count,
 	).Iter()
 
@@ -288,6 +292,7 @@ func iterToDocs(iter *gocql.Iter) ([]*protos.Document, error) {
 			&doc.WaitDuration,
 			&doc.Metadata,
 			&doc.Txid,
+			&doc.Sign,
 		) {
 			break
 		}
