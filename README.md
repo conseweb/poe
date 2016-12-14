@@ -116,7 +116,7 @@ conseweb/poe:(本地git branch)
 #### 返回值(json)
 * docs: 查询的文件列表
 
-### GET /poe/v1/documents/stat
+### GET /poe/v1/stat/customize
 获取统计信息
 
 #### 路径参数
@@ -132,7 +132,7 @@ conseweb/poe:(本地git branch)
 #### 返回值
 参考protos.ProofStat
 
-### GET /poe/v1/documents/stat/normal
+### GET /poe/v1/stat/normal
 获取一般统计信息
 
 #### 路径参数

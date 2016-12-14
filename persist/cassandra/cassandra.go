@@ -26,6 +26,7 @@ import (
 	"github.com/hyperledger/fabric/flogging"
 	"github.com/op/go-logging"
 	"github.com/spf13/viper"
+	"math"
 )
 
 var (
@@ -49,6 +50,7 @@ CREATE TABLE documents (
 CREATE INDEX ON poe.documents(hash);
 CREATE INDEX ON poe.documents(blockDigest);
 CREATE INDEX ON poe.documents(transactionId);
+CREATE INDEX ON poe.documents(submitTime);
 */
 
 type CassandraPersister struct {
@@ -232,7 +234,13 @@ func (c *CassandraPersister) FindDocs(count int) ([]*protos.Document, error) {
 
 func (c *CassandraPersister) DocProofStat(sTime, eTime time.Time) *protos.ProofStat {
 	startTime := sTime.UnixNano()
+	if startTime <= 0 {
+		startTime = 1
+	}
 	endTime := eTime.UnixNano()
+	if endTime <= 0 {
+		endTime = math.MaxInt64
+	}
 
 	stat := &protos.ProofStat{
 		StartTime: startTime,
@@ -240,7 +248,7 @@ func (c *CassandraPersister) DocProofStat(sTime, eTime time.Time) *protos.ProofS
 	}
 
 	if err := c.session.Query(
-		"SELECT count(*) FROM documents WHERE submitTime >= ? AND submitTime <= ?",
+		"SELECT count(*) FROM documents WHERE submitTime >= ? AND submitTime <= ? ALLOW FILTERING",
 		startTime,
 		endTime,
 	).Consistency(gocql.One).Scan(&stat.TotalDocs); err != nil {
@@ -249,7 +257,7 @@ func (c *CassandraPersister) DocProofStat(sTime, eTime time.Time) *protos.ProofS
 	}
 
 	if err := c.session.Query(
-		"SELECT count(*) FROM documents WHERE submitTime >= ? AND submitTime <= ? AND blockDigest = ?",
+		"SELECT count(*) FROM documents WHERE submitTime >= ? AND submitTime <= ? AND blockDigest = ? ALLOW FILTERING",
 		startTime,
 		endTime,
 		"",
