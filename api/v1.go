@@ -25,6 +25,7 @@ import (
 	"github.com/conseweb/poe/protos"
 	"github.com/conseweb/poe/sign"
 	"github.com/conseweb/poe/utils"
+	"github.com/jinzhu/now"
 	"github.com/kataras/iris"
 )
 
@@ -330,3 +331,41 @@ type ProofedDocs []*protos.Document
 func (docs ProofedDocs) Len() int           { return len(docs) }
 func (docs ProofedDocs) Less(i, j int) bool { return docs[i].ProofTime < docs[j].ProofTime }
 func (docs ProofedDocs) Swap(i, j int)      { docs[i], docs[j] = docs[j], docs[i] }
+
+func (srv *APIServer) getDocStat(ctx *iris.Context) {
+	startTs, err := ctx.URLParamInt64("startTime")
+	if err != nil {
+		ctx.Error(err.Error(), iris.StatusBadRequest)
+		return
+	}
+
+	endTs, err := ctx.URLParamInt64("endTime")
+	if err != nil {
+		ctx.Error(err.Error(), iris.StatusBadRequest)
+		return
+	}
+
+	ctx.JSON(iris.StatusOK, srv.persister.DocProofStat(time.Unix(startTs, 0), time.Unix(endTs, 0)))
+}
+
+type NormalDocStatResponse struct {
+	TotalStat *protos.ProofStat `json:"totalStat,omitempty"`
+	TodayStat *protos.ProofStat `json:"todayStat,omitempty"`
+	WeekStat  *protos.ProofStat `json:"weekStat,omitempty"`
+	MonthStat *protos.ProofStat `json:"monthStat,omitempty"`
+}
+
+func (srv *APIServer) getNormalDocStat(ctx *iris.Context) {
+	resp := &NormalDocStatResponse{
+		TotalStat: srv.persister.DocProofStat(time.Unix(0, 0), time.Unix(0, 0)),
+		TodayStat: srv.persister.DocProofStat(now.BeginningOfDay(), now.EndOfDay()),
+		WeekStat:  srv.persister.DocProofStat(now.BeginningOfWeek(), now.EndOfWeek()),
+		MonthStat: srv.persister.DocProofStat(now.BeginningOfMonth(), now.EndOfMonth()),
+	}
+
+	ctx.JSON(iris.StatusOK, resp)
+}
+
+func init() {
+	now.FirstDayMonday = true
+}
