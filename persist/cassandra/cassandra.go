@@ -261,15 +261,15 @@ func (c *CassandraPersister) DocProofStat(sTime, eTime time.Time) *protos.ProofS
 	}
 
 	if err := c.session.Query(
-		"SELECT count(*) FROM documents WHERE submitTime >= ? AND submitTime <= ? AND blockDigest = ? ALLOW FILTERING",
+		"SELECT count(*) FROM documents WHERE submitTime >= ? AND submitTime <= ? AND blockDigest > ? ALLOW FILTERING",
 		startTime,
 		endTime,
 		"",
-	).Consistency(gocql.One).Scan(&stat.WaitDocs); err != nil {
+	).Consistency(gocql.One).Scan(&stat.ProofedDocs); err != nil {
 		cassandraLogger.Warningf("count waitting documents return error: %v", err)
 		return stat
 	}
-	stat.ProofedDocs = stat.TotalDocs - stat.WaitDocs
+	stat.WaitDocs = stat.TotalDocs - stat.ProofedDocs
 
 	return stat
 }
