@@ -280,7 +280,7 @@ func (c *CassandraPersister) DocProofStat(sTime, eTime time.Time) *protos.ProofS
 		cassandraLogger.Warningf("count waitting documents return error: %v", err)
 		return stat
 	}
-	stat.ProofedDocs = stat.TotalDocs - stat.WaitDocs
+	stat.WaitDocs = stat.TotalDocs - stat.ProofedDocs
 
 	return stat
 }
