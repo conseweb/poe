@@ -45,7 +45,7 @@ func NewMemoryCache() *MemoryCache {
 }
 
 // put value into cache
-func (m *MemoryCache) Put(raw []byte, metadata string, waitDuration time.Duration) (*protos.Document, error) {
+func (m *MemoryCache) Put(appName string, raw []byte, metadata string, waitDuration time.Duration) (*protos.Document, error) {
 	m.Lock()
 	defer m.Unlock()
 
@@ -63,6 +63,7 @@ func (m *MemoryCache) Put(raw []byte, metadata string, waitDuration time.Duratio
 		SubmitTime:   nowTime.UnixNano(),
 		WaitDuration: int64(waitDuration),
 		Metadata:     metadata,
+		AppName:      appName,
 	}
 	m.vals[topic][doc.Id] = doc
 

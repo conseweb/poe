@@ -24,6 +24,16 @@ message Document {
     string txid = 9;
     // sign
     string sign = 10;
+    // appName
+    string appName = 11;
+    // proofed flag
+    DocProofStatus proofStatus = 12;
+}
+
+enum DocProofStatus {
+    NOT_SPECIFIAL = 0;
+    NOT_PROOFED = 1;
+    ALREADY_PROOFED = 2;
 }
 
 // ProofStat

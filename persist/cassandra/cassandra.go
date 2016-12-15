@@ -44,17 +44,21 @@ CREATE TABLE documents (
 	waitDuration bigint,
 	transactionId text,
 	metadata text,
-	sign text
+	sign text,
+	appName text,
+	proofStatus int
 );
 
 CREATE INDEX ON poe.documents(hash);
 CREATE INDEX ON poe.documents(blockDigest);
 CREATE INDEX ON poe.documents(transactionId);
 CREATE INDEX ON poe.documents(submitTime);
+CREATE INDEX ON poe.documents(appName);
+CREATE INDEX ON poe.documents(proofStatus);
 */
 
 const (
-	_default_select_sql = "SELECT id, hash, blockDigest, submitTime, proofTime, waitDuration, metadata, transactionId, sign FROM documents"
+	_default_select_sql = "SELECT id, hash, blockDigest, submitTime, proofTime, waitDuration, metadata, transactionId, sign, appName, proofStatus FROM documents"
 )
 
 type CassandraPersister struct {
@@ -82,12 +86,14 @@ func (c *CassandraPersister) PutDocsIntoDB(docs []*protos.Document) error {
 	batch := c.session.NewBatch(gocql.LoggedBatch)
 	for _, doc := range docs {
 		batch.Query(
-			`INSERT INTO documents(id, hash, submitTime, waitDuration, metadata) VALUES(?, ?, ?, ?, ?)`,
+			`INSERT INTO documents(id, hash, submitTime, waitDuration, metadata, appName, proofStatus) VALUES(?, ?, ?, ?, ?, ?, ?)`,
 			doc.Id,
 			doc.Hash,
 			doc.SubmitTime,
 			doc.WaitDuration,
 			doc.Metadata,
+			doc.AppName,
+			protos.DocProofStatus_NOT_PROOFED,
 		)
 	}
 
@@ -117,6 +123,8 @@ func (c *CassandraPersister) GetDocFromDBByDocID(docID string) (*protos.Document
 		&doc.Metadata,
 		&doc.Txid,
 		&doc.Sign,
+		&doc.AppName,
+		&doc.ProofStatus,
 	); err != nil {
 		cassandraLogger.Warningf("get document[%s] from Db return error: %v", docID, err)
 		return nil, err
@@ -135,10 +143,11 @@ func (c *CassandraPersister) SetDocsBlockDigest(docIDs []string, digest, txid st
 	batch := c.session.NewBatch(gocql.LoggedBatch)
 	for _, docID := range docIDs {
 		batch.Query(
-			"UPDATE documents SET blockDigest = ?, proofTime = ?, transactionId = ? WHERE id = ?",
+			"UPDATE documents SET blockDigest = ?, proofTime = ?, transactionId = ? , proofStatus = ? WHERE id = ?",
 			digest,
 			nowTimestamp,
 			txid,
+			protos.DocProofStatus_ALREADY_PROOFED,
 			docID,
 		)
 	}
@@ -223,13 +232,15 @@ func (c *CassandraPersister) FindProofedDocs(count int) ([]*protos.Document, err
 	return iterToDocs(iter)
 }
 
-func (c *CassandraPersister) FindDocs(count int) ([]*protos.Document, error) {
+func (c *CassandraPersister) FindDocs(appName string, proofStatus protos.DocProofStatus, count int) ([]*protos.Document, error) {
 	if count <= 0 {
 		return nil, fmt.Errorf("invalid param: count: %d", count)
 	}
 
 	iter := c.session.Query(
-		fmt.Sprintf("%s LIMIT ? ALLOW FILTERING", _default_select_sql),
+		fmt.Sprintf("%s WHERE appName = ? AND proofStatus = ? LIMIT ? ALLOW FILTERING", _default_select_sql),
+		appName,
+		proofStatus,
 		count,
 	).Iter()
 
@@ -261,10 +272,10 @@ func (c *CassandraPersister) DocProofStat(sTime, eTime time.Time) *protos.ProofS
 	}
 
 	if err := c.session.Query(
-		"SELECT count(*) FROM documents WHERE submitTime >= ? AND submitTime <= ? AND blockDigest = ? ALLOW FILTERING",
+		"SELECT count(*) FROM documents WHERE submitTime >= ? AND submitTime <= ? AND proofStatus = ? ALLOW FILTERING",
 		startTime,
 		endTime,
-		"",
+		protos.DocProofStatus_NOT_PROOFED,
 	).Consistency(gocql.One).Scan(&stat.WaitDocs); err != nil {
 		cassandraLogger.Warningf("count waitting documents return error: %v", err)
 		return stat
@@ -293,6 +304,8 @@ func iterToDocs(iter *gocql.Iter) ([]*protos.Document, error) {
 			&doc.Metadata,
 			&doc.Txid,
 			&doc.Sign,
+			&doc.AppName,
+			&doc.ProofStatus,
 		) {
 			break
 		}

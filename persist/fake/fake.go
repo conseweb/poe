@@ -116,7 +116,7 @@ func (p *FakePersister) FindDocsByHash(hash string) ([]*protos.Document, error) 
 	return nil, nil
 }
 
-func (p *FakePersister) FindDocs(count int) ([]*protos.Document, error) {
+func (p *FakePersister) FindDocs(appName string, proofStatus protos.DocProofStatus, count int) ([]*protos.Document, error) {
 	return nil, nil
 }
 

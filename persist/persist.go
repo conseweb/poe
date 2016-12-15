@@ -59,13 +59,13 @@ type PersistInterface interface {
 	FindDocsByHash(hash string) ([]*protos.Document, error)
 
 	// FindRegisteredDocs
-	FindRegisteredDocs(count int) ([]*protos.Document, error)
+	//FindRegisteredDocs(count int) ([]*protos.Document, error)
 
 	// FindProofedDocs
-	FindProofedDocs(count int) ([]*protos.Document, error)
+	//FindProofedDocs(count int) ([]*protos.Document, error)
 
 	// FindDocs
-	FindDocs(count int) ([]*protos.Document, error)
+	FindDocs(appName string, proofStatus protos.DocProofStatus, count int) ([]*protos.Document, error)
 
 	// DocProofStat
 	DocProofStat(sTime, eTime time.Time) *protos.ProofStat

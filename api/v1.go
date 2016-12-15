@@ -29,11 +29,16 @@ import (
 	"github.com/kataras/iris"
 )
 
+var (
+	default_appName = "def_appName"
+)
+
 // DocumentSubmitRequest
 type DocumentSubmitRequest struct {
 	ProofWaitPeriod string `json:"proofWaitPeriod" xml:"proofWaitPeriod" form:"proofWaitPeriod"`
 	RawDocument     string `json:"rawDocument" xml:"rawDocument" form:"rawDocument"`
 	Metadata        string `json:"metadata" xml:"metadata" form:"metadata"`
+	AppName         string `json:"appName" xml:"appName" form:"appName"`
 }
 
 // DocumentSubmitResponse
@@ -60,9 +65,12 @@ func (srv *APIServer) submitRaw(ctx *iris.Context) {
 		ctx.Error("proofWaitPeriod format is invalid", iris.StatusBadRequest)
 		return
 	}
+	if req.Metadata != "" {
+		req.AppName = default_appName
+	}
 
 	apiLogger.Debugf("receive<%s, %s>", req.RawDocument, waitPeriod.String())
-	doc, err := srv.cache.Put([]byte(req.RawDocument), req.Metadata, waitPeriod)
+	doc, err := srv.cache.Put(req.AppName, []byte(req.RawDocument), req.Metadata, waitPeriod)
 	if err != nil {
 		apiLogger.Errorf("put sumit document into cache return error: %v", err)
 		ctx.Error("poe server can't provider service now, sorry", iris.StatusInternalServerError)
@@ -286,6 +294,10 @@ type GetDocsResponse struct {
 
 // getRegisteredDocs returns registered in the platform but still not ben proofed documents
 func (srv *APIServer) getDocs(ctx *iris.Context) {
+	appName := ctx.URLParam("appName")
+	if appName == "" {
+		appName = default_appName
+	}
 	searchType := ctx.URLParam("type")
 	count, err := ctx.URLParamInt("count")
 	if err != nil || count <= 0 {
@@ -298,13 +310,13 @@ func (srv *APIServer) getDocs(ctx *iris.Context) {
 	var docs []*protos.Document
 	switch searchType {
 	case "register":
-		docs, err = srv.persister.FindRegisteredDocs(count)
+		docs, err = srv.persister.FindDocs(appName, protos.DocProofStatus_NOT_PROOFED, count)
 		sort.Sort(RegisteredDocs(docs))
 	case "proof":
-		docs, err = srv.persister.FindProofedDocs(count)
+		docs, err = srv.persister.FindDocs(appName, protos.DocProofStatus_ALREADY_PROOFED, count)
 		sort.Sort(ProofedDocs(docs))
 	case "":
-		docs, err = srv.persister.FindDocs(count)
+		docs, err = srv.persister.FindDocs(appName, protos.DocProofStatus_NOT_SPECIFIAL, count)
 		sort.Sort(RegisteredDocs(docs))
 	default:
 		ctx.Error("not supported doc status type", iris.StatusBadRequest)

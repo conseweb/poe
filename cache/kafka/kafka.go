@@ -99,7 +99,7 @@ func NewKafkaCache() *KafkaCache {
 	return cache
 }
 
-func (k *KafkaCache) Put(raw []byte, metadata string, waitDuration time.Duration) (*protos.Document, error) {
+func (k *KafkaCache) Put(appName string, raw []byte, metadata string, waitDuration time.Duration) (*protos.Document, error) {
 	topic := k.Topic(waitDuration)
 	nowTime := tsp.Now()
 
@@ -110,6 +110,7 @@ func (k *KafkaCache) Put(raw []byte, metadata string, waitDuration time.Duration
 		SubmitTime:   nowTime.UnixNano(),
 		WaitDuration: int64(waitDuration),
 		Metadata:     metadata,
+		AppName:      appName,
 	}
 	docBytes, err := proto.Marshal(doc)
 	if err != nil {
