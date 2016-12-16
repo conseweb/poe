@@ -35,12 +35,3 @@ enum DocProofStatus {
     NOT_PROOFED = 1;
     ALREADY_PROOFED = 2;
 }
-
-// ProofStat
-message ProofStat {
-    int64 startTime = 1;
-    int64 endTime = 2;
-    int64 totalDocs = 3;
-    int64 waitDocs = 4;
-    int64 proofedDocs = 5;
-}
