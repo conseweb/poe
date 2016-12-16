@@ -186,7 +186,7 @@ func (l *LevelDBPersister) FindProofedDocs(count int) ([]*protos.Document, error
 	return nil, fmt.Errorf("unsupported operation")
 }
 
-func (l *LevelDBPersister) FindDocs(count int) ([]*protos.Document, error) {
+func (l *LevelDBPersister) FindDocs(appName string, proofStatus protos.DocProofStatus, count int) ([]*protos.Document, error) {
 	return nil, fmt.Errorf("unsupported operation")
 }
 
