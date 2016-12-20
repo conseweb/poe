@@ -62,7 +62,7 @@ cache:
 #
 ##########################################################
 persist:
-  # which type of persist will be used, fake/cassandra/leveldb
+  # which type of persist will be used, cassandra
   type: cassandra
 
   # internal chan cap
