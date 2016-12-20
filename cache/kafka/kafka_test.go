@@ -16,69 +16,62 @@ limitations under the License.
 */
 package kafka
 
-//
-//import (
-//	"github.com/Shopify/sarama"
-//	"github.com/spf13/viper"
-//	"gopkg.in/check.v1"
-//	"testing"
-//	"time"
-//	"fmt"
-//)
-//
-//func TestALL(t *testing.T) {
-//	check.TestingT(t)
-//}
-//
-//type KafkaCacheTest struct {
-//	broker *sarama.MockBroker
-//	cache  *KafkaCache
-//}
-//
-//var _ = check.Suite(&KafkaCacheTest{})
-//var testMsg = sarama.StringEncoder("Foo")
-//var topic = fmt.Sprintf("kafka_%s", time.Minute.String())
-//
-//func (t *KafkaCacheTest) SetUpSuite(c *check.C) {
-//	viper.Set("cache.kafka.retry", 10)
-//	viper.Set("cache.kafka.brokers", []string{"localhost:9092"})
-//	viper.Set("api.period", map[string]int64{"1m": 1000})
-//
-//	t.broker = sarama.NewMockBrokerAddr(c, 1, "localhost:9092")
-//	mockFetchResponse := sarama.NewMockFetchResponse(c, 1)
-//	for i := 0; i < 10; i++ {
-//		mockFetchResponse.SetMessage(topic, 0, int64(i+1234), testMsg)
-//	}
-//
-//	t.broker.SetHandlerByMap(map[string]sarama.MockResponse{
-//		"MetadataRequest": sarama.NewMockMetadataResponse(c).
-//			SetBroker(t.broker.Addr(), t.broker.BrokerID()).
-//			SetLeader(topic, 0, t.broker.BrokerID()),
-//		"OffsetRequest": sarama.NewMockOffsetResponse(c).
-//			SetOffset(topic, 0, sarama.OffsetOldest, 0).
-//			SetOffset(topic, 0, sarama.OffsetNewest, 2345),
-//		"FetchRequest": mockFetchResponse,
-//	})
-//}
-//
-//func (t *KafkaCacheTest) TearDownSuite(c *check.C) {
-//	t.broker.Close()
-//}
-//
-//func (t *KafkaCacheTest) SetUpTest(c *check.C) {
-//	t.cache = NewKafkaCache()
-//}
-//
-//func (t *KafkaCacheTest) TearDownTest(c *check.C) {
-//	c.Check(t.cache.Close(), check.IsNil)
-//}
-//
-//func (t *KafkaCacheTest) TestPut(c *check.C) {
-//	doc1, err1 := t.cache.Put([]byte("1"), t.cache.Topic(time.Minute))
-//	doc2, err2 := t.cache.Put([]byte("2"), t.cache.Topic(time.Minute))
-//
-//	c.Check(err1, check.IsNil)
-//	c.Check(err2, check.IsNil)
-//	c.Check(doc1.Raw, check.DeepEquals, []byte("1"))
-//	c.Check(doc2.Raw, check.DeepEquals, []byte("2"))
-//}
+import (
+	"fmt"
+	"time"
+
+	"github.com/Shopify/sarama"
+	"github.com/spf13/viper"
+	"gopkg.in/check.v1"
+)
+
+type KafkaCacheTest struct {
+	broker *sarama.MockBroker
+	cache  *KafkaCache
+}
+
+var _ = check.Suite(&KafkaCacheTest{})
+var testMsg = sarama.StringEncoder("Foo")
+var topic = fmt.Sprintf("kafka_%s", time.Minute.String())
+
+func (t *KafkaCacheTest) SetUpSuite(c *check.C) {
+	viper.Set("cache.kafka.retry", 10)
+	viper.Set("cache.kafka.brokers", []string{"localhost:9092"})
+	viper.Set("api.period", map[string]int64{"1m": 1000})
+
+	t.broker = sarama.NewMockBrokerAddr(c, 1, "localhost:9092")
+	mockFetchResponse := sarama.NewMockFetchResponse(c, 1)
+	for i := 0; i < 10; i++ {
+		mockFetchResponse.SetMessage(topic, 0, int64(i+1234), testMsg)
+	}
+
+	t.broker.SetHandlerByMap(map[string]sarama.MockResponse{
+		"MetadataRequest": sarama.NewMockMetadataResponse(c).
+			SetBroker(t.broker.Addr(), t.broker.BrokerID()).
+			SetLeader(topic, 0, t.broker.BrokerID()),
+		"OffsetRequest": sarama.NewMockOffsetResponse(c).
+			SetOffset(topic, 0, sarama.OffsetOldest, 0).
+			SetOffset(topic, 0, sarama.OffsetNewest, 2345),
+		"FetchRequest": mockFetchResponse,
+	})
+}
+
+func (t *KafkaCacheTest) TearDownSuite(c *check.C) {
+	t.broker.Close()
+}
+
+func (t *KafkaCacheTest) SetUpTest(c *check.C) {
+	t.cache = NewKafkaCache()
+}
+
+func (t *KafkaCacheTest) TearDownTest(c *check.C) {
+	c.Check(t.cache.Close(), check.IsNil)
+}
+
+func (t *KafkaCacheTest) TestPut(c *check.C) {
+	_, err1 := t.cache.Put("appName", []byte("1"), "", time.Minute)
+	_, err2 := t.cache.Put("appName", []byte("2"), "", time.Minute)
+
+	c.Check(err1, check.IsNil)
+	c.Check(err2, check.IsNil)
+}
