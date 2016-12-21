@@ -17,6 +17,8 @@ limitations under the License.
 package api
 
 import (
+	"fmt"
+
 	"github.com/conseweb/poe/blockchain"
 	"github.com/conseweb/poe/cache"
 	"github.com/conseweb/poe/persist"
@@ -100,4 +102,18 @@ func (srv *APIServer) Stop() error {
 	}
 
 	return nil
+}
+
+func (srv *APIServer) Error(ctx *iris.Context, status int, errs ...interface{}) {
+	l := len(errs)
+	ret := map[string]interface{}{"error": "unknown"}
+	if l > 0 {
+		ret["error"] = fmt.Sprint(errs[0])
+	}
+	if l > 1 {
+		ret["message"] = errs[1:]
+	}
+	ctx.Response.Reset()
+	ctx.JSON(status, ret)
+	ctx.StopExecution()
 }
