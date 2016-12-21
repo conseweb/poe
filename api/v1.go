@@ -19,6 +19,7 @@ package api
 import (
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"sort"
 	"time"
 
@@ -214,7 +215,7 @@ func (srv *APIServer) getProofResult(ctx *iris.Context) {
 	response := &GetProofResponse{Doc: &protos.Document{}}
 	doc, err := srv.persister.GetDocFromDBByDocID(docID)
 	if err != nil {
-		srv.Error(ctx, 404, err, response)
+		srv.Error(ctx, 404, fmt.Errorf("cannot found %v, %s", docID, err.Error()), response)
 		return
 	}
 
@@ -230,7 +231,7 @@ func (srv *APIServer) getProofResult(ctx *iris.Context) {
 	// based on document block digest, get all documents in same block
 	blockDocs, err := srv.persister.FindDocsByBlockDigest(response.Doc.BlockDigest)
 	if err != nil {
-		srv.Error(ctx, 404, err, response)
+		srv.Error(ctx, 404, fmt.Errorf("cannot found in blockchain, %s", err.Error()), response)
 		return
 	}
 	apiLogger.Debugf("using same blockdigest %v docs.", len(blockDocs))
