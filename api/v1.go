@@ -214,9 +214,7 @@ func (srv *APIServer) getProofResult(ctx *iris.Context) {
 	response := &GetProofResponse{Doc: &protos.Document{}}
 	doc, err := srv.persister.GetDocFromDBByDocID(docID)
 	if err != nil {
-		response.Status = "none"
-		response.Message = err.Error()
-		ctx.JSON(iris.StatusNotFound, response)
+		srv.Error(ctx, 404, err, response)
 		return
 	}
 
@@ -224,27 +222,23 @@ func (srv *APIServer) getProofResult(ctx *iris.Context) {
 	// if document's blockDigest is blank, means blockchain has not proof exists
 	if response.Doc.BlockDigest == "" {
 		response.Status = "wait"
-
 		response.PerdictProofTime = time.Unix(response.Doc.SubmitTime, 0).UTC().Add(time.Duration(response.Doc.WaitDuration)).Unix()
-		ctx.JSON(iris.StatusAccepted, response)
+		srv.Error(ctx, 406, "file is waiting.", response)
 		return
 	}
 
 	// based on document block digest, get all documents in same block
 	blockDocs, err := srv.persister.FindDocsByBlockDigest(response.Doc.BlockDigest)
 	if err != nil {
-		response.Status = "invalid"
-		response.Message = err.Error()
-		ctx.JSON(iris.StatusNotFound, response)
+		srv.Error(ctx, 404, err, response)
 		return
 	}
-	apiLogger.Debugf("using same blockdigest docs: %v", blockDocs)
+	apiLogger.Debugf("using same blockdigest %v docs.", len(blockDocs))
 
 	// verify by blockchain
 	if !srv.blcokchain.VerifyDocs(blockDocs) {
 		response.Status = "invalid"
-		response.Message = "not verified."
-		ctx.JSON(iris.StatusInternalServerError, response)
+		srv.Error(ctx, 400, "verify failed.", response)
 		return
 	}
 
@@ -253,8 +247,7 @@ func (srv *APIServer) getProofResult(ctx *iris.Context) {
 		sign, pubKey, err := srv.setDocSign(response.Doc)
 		if err != nil {
 			response.Status = "invalid"
-			response.Message = err.Error()
-			ctx.JSON(iris.StatusInternalServerError, response)
+			srv.Error(ctx, 500, err, response)
 			return
 		}
 
